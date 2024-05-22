@@ -41,14 +41,30 @@
                 .weak
 BUGFIX=false                    ;Various bug fixes (see below)
 FASTGB=false                    ;OSGBPB calls 1..4 transfer whole sectors directly from
-                .endweak
                                 ;or to user memory
+                .endweak
                 .weak
 NMOS=false                      ;Code uses only NMOS 6502 instructions
 TURBO=false                     ;Unrolled 'save AXY' routine for shorter debugging traces
 SQUEEZE=false                   ;Unreachable code removed and some routines shortened
                 .endweak
 
+                .weak
+dfs226=false
+                .endweak
+
+                .if dfs226
+                ; Bodge/hack region
+close=$ffff
+delete=$ffff
+build=$ffff
+dump=$ffff
+list_=$ffff
+roms=$ffff
+type_=$ffff
+pmhelp=$ffff
+                .endif
+                
 ;Bugs fixed by _BUGFIX:
 ;- LIBFS executable searches terminate (2.25)
 ;- OSWORD $7F drive parameter bit 3 enables double density
@@ -354,7 +370,11 @@ lang:                           ;Language entry
                 .char copyr-lang ;copyright offset pointer
                 .char $79       ;version No.
                 .text "DFS",$00 ;title and terminator byte
+                .if dfs226
+                .text "2.26"
+                .else
                 .text "2.24"    ;version string
+                .endif
 copyr:
                 .char $00       ;terminator byte
                 .text "(C)1985 Acorn",$00 ;copyright string and terminator byte
@@ -711,7 +731,9 @@ nofil:                          ;Raise "Not found" error
                 .char $00
 
 ex:                             ;FSC  9 = *EX
+                .if !dfs226
                 jsr stxylp      ;set GSINIT pointer to XY, set Y=0 [D]new
+                .endif
                 jsr setdef      ;set current drive and directory = default
                 jsr setupr      ;call GSINIT with C=0
                 beq L8246       ;if no argument then list default directory
@@ -730,10 +752,14 @@ L8246:
                 .endif
 
 info:                           ;FSC 10 = *INFO
+                .if !dfs226
                 jsr stxylp      ;allow wildcard characters in filename
+                .endif
                 jsr setwld
                 jsr setupr      ;call GSINIT with C=0
+                .if !dfs226
                 beq L826E       ;if no argument then raise "Bad name" error
+                .endif
                 jsr getlok      ;else ensure file matching spec in catalogue
 L8265:
                 jsr prtinf      ;print *INFO line
@@ -741,9 +767,11 @@ L8265:
                 bcs L8265       ;loop until no more files match.
                 rts
 
+                .if !dfs226
 L826E:
                 jmp namerr      ;raise "Bad name" error
-
+                .endif
+                
 L8271:                          ;Search for file with execute privilege
                 jsr L93AD       ;ensure catalogue loaded with execute privilege
                 lda #buffer-buffer ;compare with name in buffer
@@ -1400,12 +1428,22 @@ comtab:                         ;DFS command table
                 .text "BACKUP"  ;*BACKUP                        $A436
                 .char >(cpydsk-$01),<(cpydsk-$01)
                 .char $04       ;syntax $4: <source> <dest.>
+                .if dfs226
+                .text "CLOSE"   ;*CLOSE
+                .char >(close-$01),<(close-$01)
+                .char $00
+                .endif
                 .text "COMPACT" ;*COMPACT                       $A263
                 .char >(compct-$01),<(compct-$01)
                 .char $07       ;syntax $7: (<drive>)
                 .text "COPY"    ;*COPY                          $A482
                 .char >(cpyfil-$01),<(cpyfil-$01)
                 .char $24       ;syntax $4,$2: <source> <dest.> <afsp>
+                .if dfs226
+                .text "DELETE"
+                .char >(delete-$01),<(delete-$01)
+                .char $01
+                .endif
                 .text "DESTROY" ;*DESTROY                       $8756
                 .char >(destry-$01),<(destry-$01)
                 .char $02       ;syntax $2: <afsp>
@@ -1418,12 +1456,22 @@ comtab:                         ;DFS command table
                 .text "ENABLE"  ;*ENABLE                        $8B0D
                 .char >(enable-$01),<(enable-$01)
                 .char $00       ;syntax $0: no arguments
+                .if dfs226
+                .text "EX"
+                .char >(ex-$01),<(ex-$01)
+                .char $06
+                .endif
                 .text "FORM"    ;*FORM                          $A5DE
                 .char >(form  -$01),<(form  -$01)
                 .char $BA       ;syntax $A,$B: 40/80 (<drive>)...
                 .text "FREE"    ;*FREE                          $A812
                 .char >(free  -$01),<(free  -$01)
                 .char $07       ;syntax $7: (<drive>)
+                .if dfs226
+                .text "INFO"
+                .char >(info-$01),<(info-$01)
+                .char $02
+                .endif
                 .text "LIB"     ;*LIB                           $8909
                 .char >(slib  -$01),<(slib  -$01)
                 .char $06       ;syntax $6: (<dir>)
@@ -1446,9 +1494,34 @@ comtab:                         ;DFS command table
                 .char >(defcom-$01),<(defcom-$01)
 
 initbl:                         ;Utility command table
+                .if dfs226
+                .text "BUILD"
+                .char >(build-$01),<(build-$01)
+                .char $01
+                .endif
                 .text "DISC"    ;*DISC                          $9B6B
                 .char >(init  -$01),<(init  -$01)
                 .char $00       ;syntax $0: no arguments
+                .if dfs226
+                .text "DUMP"
+                .char >(dump-$01),<(dump-$01)
+                .char $01
+                .endif
+                .if dfs226
+                .text "LIST"
+                .char >(list_-$01),<(list_-$01)
+                .char $01
+                .endif
+                .if dfs226
+                .text "ROMS"
+                .char >(roms-$01),<(roms-$01)
+                .char $01
+                .endif
+                .if dfs226
+                .text "TYPE"
+                .char >(type_-$01),<(type_-$01)
+                .char $01
+                .endif
                 .text "DISK"    ;*DISK                          $9B6B
                 .char >(init  -$01),<(init  -$01)
                 .char $00       ;syntax $0: no arguments
@@ -1460,6 +1533,11 @@ hlptab:                         ;*HELP keyword table
                 .char >(help  -$01),<(help  -$01)
                 .char $00       ;syntax $0: no arguments
                                 ;unrecognised keyword, skip     $A15D
+                .if dfs226
+                .text "UTILS"
+                .char >(pmhelp-$01),<(pmhelp-$01)
+                .char $00
+                .endif
                 .char >(nohelp-$01),<(nohelp-$01)
 
 wname:                          ;FSC  3 = unrecognised *command
