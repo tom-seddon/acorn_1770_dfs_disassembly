@@ -63,6 +63,8 @@ list_=$ffff
 roms=$ffff
 type_=$ffff
 pmhelp=$ffff
+LAEA9_226=$aea9
+L9ADE_226=$9ade
                 .endif
                 
 ;Bugs fixed by _BUGFIX:
@@ -99,7 +101,11 @@ pmhelp=$ffff
 ;  Dabs Press, 1988, 2nd ed.)
 
 
+                .if NMOS
+                .cpu "6502"
+                .else
                 .cpu "65c02"
+                .endif
 
 dftbid=$01                      ;Tube claimant ID for Disc Filing System
 srtbid=$08                      ;Tube claimant ID for SRAM
@@ -370,6 +376,48 @@ oscli=$FFF7                     ;Execute command line
 
 *=$8000
 
+; There is one section for each region that obviously corresponds to
+; one of the source files in AcornDNFSv300, named after that file.
+; Then some extras for any additions.
+
+                .if dfs226
+
+                .dsection DOS01
+                .dsection DOS01_1
+                .dsection DOS02
+                .dsection DOS02_1
+                .dsection DOS03
+                .dsection DOS03_1
+                .dsection DOS06
+                .dsection DOS04
+                .dsection DOS05
+                .dsection DOS07
+                .dsection DOS08
+                .dsection DOS09
+                .dsection DOS10
+                .dsection DOS_rest
+                
+                .else
+
+                .dsection DOS01
+                .dsection DOS01_1
+                .dsection DOS02
+                .dsection DOS02_1
+                .dsection DOS03
+                .dsection DOS03_1
+                .dsection DOS04
+                .dsection DOS05
+                .dsection DOS06
+                .dsection DOS07
+                .dsection DOS08
+                .dsection DOS09
+                .dsection DOS10
+                .dsection DOS_rest
+
+                .endif
+
+                .section DOS01
+                
 lang:                           ;Language entry
                 brk
                 .word $0000
@@ -1130,6 +1178,10 @@ savit:                          ;Save XY
                 jmp savrta      ;restore y,x on entry, a on exit.
                 .endif
 
+                .endsection DOS01
+
+                .section DOS01_1
+
 L8426:                          ;Convert binary value in A to BCD
                 jsr savit       ;save XY
                 tay             ;if A=0
@@ -1228,6 +1280,10 @@ L848C:
                 plp
 L848D:
                 rts
+
+                .endsection
+
+                .section DOS02
 
 wdcat:                          ;FSC  5 = *CAT
                 jsr stxylp      ;set GSINIT pointer to XY, set Y=0
@@ -2334,7 +2390,10 @@ ren5:
                 bpl ren5        ;loop until 8 bytes copied
                 jmp dirout      ;write volume catalogue and exit
 
+                .endsection DOS02
 
+                .section DOS02_1
+                
 L8BBC:                          ;Internal OSWORD $7F handler
                 clc             ;c=0 interrupts not enabled
                 bcc L8BC1       ;branch into routine (always)
@@ -3254,9 +3313,14 @@ L90AF:                          ;Write sector register
                 bne L90AF
                 rts
 
-                .if SQUEEZE
+                .if SQUEEZE&&!dfs226
+                .else
+                .if dfs226
+L9104_226:
                 .else
                                 ;unreachable code
+                .endif
+                
                 ldx #$00
                 lda #$5A        ;set track reg. out of range
 L90BC:
@@ -3788,6 +3852,11 @@ titset:
                 bcc titset      ;if not then loop to write more, else:
 titend:
                 .endif
+
+                .endsection DOS02_1
+
+                .section DOS03
+                
 dirout:                         ;Write volume catalogue L4
                 lda cycno       ;add 1 to BCD catalogue cycle number
                 clc             ;[D]reordered
@@ -3977,6 +4046,10 @@ L94E2:
 L94E9:
                 rts
 
+                .endsection DOS03
+
+                .section DOS03_1
+                
 L94EA:                          ;Clear high OSWORD $7F control block
                 ldx #$0D
                 lda #$00
@@ -3988,6 +4061,10 @@ L94EE:
                 sta LC290+$05
                 rts
 
+                .endsection DOS03_1
+
+                .section DOS04
+
 whlim:                          ;FSC  7 = range of valid file handles
                 ldx #$11
                 ldy #$15
@@ -3997,8 +4074,12 @@ shtal1:
 wfdie:                          ;FSC  6 = new filing system starting up
                 jsr savita      ;save AXY
                 lda #$77        ;call OSBYTE $77 = close *SPOOL/*EXEC files
+                .if dfs226
+                jmp osbyte
+                .else
                 jsr osbyte
                 jmp relmem      ;[D]vacate absolute workspace
+                .endif
 
                 .if SQUEEZE
                 .else
@@ -4351,11 +4432,17 @@ wargs:                          ;OSARGS
                 beq ensur       ;then ensure file up-to-date on disc
                 cpy #$00        ;else if Y = 0
                 beq wargs1      ;then perform Y = 0 functions
+                .if dfs226
+                cmp #$03        ;else file handle in Y.  if A>=4
+                .else
                 cmp #$04        ;else file handle in Y.  if A>=4
+                .endif
                 bcs wargsr      ;then return
                 jsr wopa        ;else have A=0 returned on exit
+                .if !dfs226
                 cmp #$03        ;if A=3
                 beq L97A9       ;then set EXT
+                .endif
                 cmp #$01        ;else compare A - 1
                 bne vradr       ;if A=0 or A=2 then return PTR or EXT
                 jmp vstar       ;else A=1 set PTR
@@ -4399,6 +4486,8 @@ vradr:                          ;OSARGS A=0/2, Y>0 return PTR/EXT
                 sta $03,x       ;PTR <= EXT < 16 MiB
                 rts
 
+                .if !dfs226
+                
 L97A9:                          ;OSARGS A=3, Y>0 set EXT
                 jsr dcrych      ;ensure file handle valid and open
                 .if BUGFIX
@@ -4468,6 +4557,8 @@ args3x:
                 .endif
                 .endif
 
+                .endif
+
 cheeky:                         ;Validate workspace offset
                 pha             ;save A
                 stx seqwx       ;save X in workspace
@@ -4527,6 +4618,10 @@ dcryp1:
                 tay             ;yielding $00..E0
                 pla             ;transfer to Y as index
                 rts             ;restore A on entry
+
+                .endsection DOS04
+
+                .section DOS05
 
 hmtspe:                         ;Close *SPOOL/*EXEC file on error
                 lda #$C6        ;OSBYTE $C6 = read/write *EXEC file handle
@@ -4941,6 +5036,9 @@ scmp:                           ;Compare EXT - OSARGS parameter
                 sbc $02,x
                 rts
 
+                .endsection DOS05
+
+                .section DOS06
                                 ;Table of boot commands
 load:
                 .text "L.!BOOT",$0D
@@ -4948,6 +5046,8 @@ exec:
                 .text "E."
 run:
                 .text "!BOOT",$0D
+
+                .if !dfs226
 
 L9ADE:                          ;DFS service call handler
                 .if NMOS
@@ -5042,13 +5142,16 @@ pmsg:                           ;Service call $03 = boot filing system
 L9B4F:
                 lda #$78        ;OSBYTE $78 = write keys pressed information
                 jsr osbyte
+
+                .endif
+                
 L9B54:
                 lda itemp       ;a=boot flag passed to service call
                 jsr vstrng
                 .text "Acorn 1770 DFS"
                 .char $0D
                 .char $0D       ;iff A=0 then force cold start, enable boot
-                .if NMOS
+                .if NMOS||dfs226
                 bcc sinit0      ;branch always
                 .else
                 bra sinit0      ;65C02 instruction
@@ -5186,6 +5289,49 @@ arun:
 aboot3:
                 jmp oscli       ;call OSCLI and exit.
 
+                .if dfs226
+L9ADE:
+                jsr LAEA9_226
+                pha
+                lda priptr,x
+                bmi L96C1_226
+                pla
+                cmp #1
+                bne L9683_226
+                jsr L9104_226
+                ldx romid
+                bcs L967A_226
+                lda #$80
+                sta priptr,x
+                lda #1
+                rts
+
+L967A_226:
+                lda #1
+                cpy #$17
+                bcs L9682_226
+                ldy #$17
+L9682_226:
+                rts
+
+L9683_226:
+                cmp #2
+                bne pmsg_226
+                pha
+                tya
+                pha
+                sta temp+1
+                ldy priptr,x
+                sta priptr,x
+                lda #0
+                sta temp+0
+                cpy temp+1
+                beq L969E_226
+                ldy #colds-mainws
+                sta (temp),y
+L969E_226:
+                .else
+
 savpri:                         ;Service call $02 = reserve private workspace
                 lda priptr,x    ;space ends at $DC00, highest valid alloc = $DA
                 cmp #$DB        ;if we got our two pages in HAZEL
@@ -5203,6 +5349,7 @@ L9C66:
                 .endif
                 lda #$00
                 sta temp+$00
+                .endif
                 lda #$FD        ;OSBYTE $FD = read/write last reset type
                 jsr readby      ;call OSBYTE with X=$00, Y=$FF
                 dex             ;now X=$FF soft break, $00 power on, $01 hard break
@@ -5220,6 +5367,16 @@ L9C66:
 notgot:
                 lda #$00        ;b7=0 we don't own the shared workspace
                 sta (temp),y    ;write to memflg offset of private page
+                .if dfs226
+                ldx romid
+                pla
+                tay
+                iny
+                iny
+L96C1_226:
+                pla
+L96C2_226:
+                .else
                 .if NMOS
                 pla
                 tay
@@ -5240,16 +5397,63 @@ nmos1:
                 iny
 L9C96:
                 .endif
+                .endif
                 rts
 
+                .if dfs226
+pmsg_226:
+                jsr savita
+                cmp #3
+                bne chkcom
+
+                sty itemp
+                
+                lda #0
+                sta LC2DE       ;disable 8271 emulation on drive 0
+                
+                lda #$7a
+                jsr osbyte
+                txa
+                bmi L96E9_226
+                cmp #$32        ;D
+                beq L96E4_226
+                cmp #$61        ;Z
+                bne L96C2_226
+                jsr LA9FB       ;8271/MOS 1.20 emulation
+L96E4_226:
+                lda #$78
+                jsr osbyte
+L96E9_226:
+                jmp L9B54
+                .endif
+
 chkcom:                         ;Service call $04 = unrecognised *command
+                .if dfs226
+                cmp #4
+                bne inifsy_226
+                .else
                 jsr savita      ;save AXY
+                .endif
                 ldx #<(initbl-comtab-$03) ;point to utility section of command table
 L9C9C:
                 jmp wname0      ;execute matching command.
 
+                .if dfs226
+inifsy_226:
+                cmp #$12
+                bne dohelp
+                cpy #4
+                bne L973C_226
+                jmp init
+                .endif
+
 dohelp:                         ;Service call $09 = *HELP
+                .if dfs226
+                cmp #9
+                bne relmem
+                .else
                 jsr savita
+                .endif
                 lda (linptr),y  ;y points to non-space character
                 ldx #<(hlptab-comtab-$03) ;point to *HELP keyword section of command table
                 cmp #$0D        ;if keyword specified
@@ -5264,29 +5468,56 @@ dohelp:                         ;Service call $09 = *HELP
 ;if DFS does not own absolute workspace
 
 relmem:                         ;Service call $0A = absolute workspace claimed
+                .if dfs226
+                jsr wopa
+                cmp #$a
+                bne unkwrd
+                .endif
+
                 jsr suspri      ;set up pointer to private page
+                
+                .if dfs226
+                ldy #memflg
+                lda (temp),y
+                bpl unkswa
+                .endif
+                
                 ldy #$00        ;y=$00 ensure all files up-to-date on disc
                 jsr nsrnow      ;ensure a file/all files
                 jsr savmem      ;copy shared workspace to private page
                 jsr suspri      ;set up pointer again (clobbered during ensure)
+                
                 ldy #memflg
                 lda #$00        ;always claim call since past gatekeeping
                 sta (temp),y    ;b7=0 we don't own the shared workspace
                 rts
 
-                .if SQUEEZE
+                .if SQUEEZE&&!dfs226
                 .else
+.if dfs226
+unkswa:
+.else
                                 ;unreachable code
+.endif
                 lda #$0A
                 .endif
 unkswz:                         ;Have current value of A returned on exit
                 tsx
                 sta stack+$05,x
+                .if dfs226
+L973C_226:
+                .endif
                 rts
 
 unkwrd:                         ;Service call $08 = unrecognised OSWORD
+                .if dfs226
+                cmp #8
+                bne unkswz
+                .else
                 jsr savita      ;save AXY
                 jsr wopa        ;have A=0 returned on exit
+                .endif
+                
                 ldy worda       ;get OSWORD reason code in Y
                 bmi unkswz      ;if >=$80 then put call number back, pass call on
                 cpy #$7D        ;else if less than $7D
@@ -5346,13 +5577,16 @@ L9D15:
                 sta (userpt),y  ;clear MSB volume size
                 rts
 
+                .if !dfs226
 L9D18:                          ;Service call $21 = reserve abs wksp in HAZEL
                 cpy #$CA        ;need 10 pages
                 bcs L9D1E       ;if high water mark is less
                 ldy #$CA        ;then set it to HAZEL + 10 pages
 L9D1E:
                 rts
+                .endif
 
+                .if !dfs226
 L9D1F:                          ;Service call $22 = reserve priv wksp in HAZEL
                 tya             ;[BUG]Y may be too high OR too low at this point
                 sta priptr,x    ;set private page pointer to Y anyway
@@ -5360,12 +5594,16 @@ L9D1F:                          ;Service call $22 = reserve priv wksp in HAZEL
                 iny             ;claim two pages of HAZEL
                 iny             ;and clean up during service call $02.
                 rts
+                .endif
 
+                .if !dfs226
 L9D28:                          ;Service call $24 = abs wkspace in HAZEL count
                 dey             ;bid for two pages in HAZEL
                 dey             ;leftovers from abs+private offered in call $23
                 rts
+                .endif
 
+                .if !dfs226
 L9D2B:                          ;Service call $25 = return FS information
                 ldx #L9D51-L9D3B-$01 ;22 bytes to write:
 L9D2D:
@@ -5385,6 +5623,7 @@ L9D3B:
                 .char $04,$15,$11 ;FS number, highest, lowest file handles
                 .text "    KSID" ;FS name
 L9D51:
+                .endif
 
                 .if BUGFIX
 shut:                           ;Service call $26 = *SHUT command issued
@@ -5430,6 +5669,7 @@ LA26A:
 ;Even so, this routine has no entry in the jump table and therefore
 ;*SHUT does not close files on DFS volumes.
 
+                .if !dfs226
                                 ;unreachable code
                                 ;service call $26 = *SHUT command issued
                 .if NMOS
@@ -5448,6 +5688,8 @@ LA26A:
                 ldx romid
                 lda #$26
                 rts
+                .endif
+
                 .endif
 
 wfile:                          ;OSFILE
@@ -5967,6 +6209,10 @@ getlsz:                         ;Get start and size of user memory
                 rts             ;save result = no. pages of user memory.
 
 getmem:                         ;Claim shared workspace
+                .if dfs226
+                ldx #$a
+                jsr readsw
+                .endif
                 jsr suspri      ;[D]not sending service call $0A
                 ldy #colds-mainws ;set up pointer to private page
                 lda #$FF        ;b7=1 to allow a warm start
@@ -5978,10 +6224,18 @@ getmem:                         ;Claim shared workspace
 
 suspri:                         ;Set up pointer to private page
                 pha
+                .if dfs226
+                ldx romid
+                .endif
                 lda #$00        ;clear LSB, always start on page boundary
                 sta temp+$00
+                .if !dfs226
                 ldx romid
+                .endif
                 lda priptr,x    ;get private page number from table
+                .if dfs226
+                and #$3f
+                .endif
                 sta temp+$01    ;store MSB of pointer
                 pla
                 rts
@@ -6008,9 +6262,13 @@ doswcl:                         ;Call OSBYTE $8F = issue service call
                 lda #$8F
                 bne bytjmp
 
-                .if SQUEEZE
+                .if SQUEEZE&&!dfs226
+                .else
+                .if dfs226
+readsw:
                 .else
                                 ;unreachable code
+                .endif
                                 ;Call OSBYTE $FF = read/write startup options
                 lda #$FF
                 .endif
@@ -6057,10 +6315,12 @@ fscltb:
                 .char <(wdcat -$01) ;FSC  5 = *CAT                  $848E
                 .char <(wfdie -$01) ;FSC  6 = new FS starting up    $94FF
                 .char <(whlim -$01) ;FSC  7 = valid file handles    $94FA
+                .if !dfs226
                 .char <(wstus -$01) ;FSC  8 = *command entered      $9F73
                 .char <(ex    -$01) ;FSC  9 = *EX                   $8238
                 .char <(info  -$01) ;FSC 10 = *INFO                 $8257
                 .char <(wnota -$01) ;FSC 11 = *RUN from library     $8832
+                .endif
 
 ;Table of action addresses for FSC calls 0..11, high bytes
 fschtb:
@@ -6072,10 +6332,12 @@ fschtb:
                 .char >(wdcat -$01)
                 .char >(wfdie -$01)
                 .char >(whlim -$01)
+                .if !dfs226
                 .char >(wstus -$01)
                 .char >(ex    -$01)
                 .char >(info  -$01)
                 .char >(wnota -$01)
+                .endif
 
 ;Table of action addresses for OSFILE calls $FF,0..7, low bytes
 filjpl:
@@ -6149,6 +6411,10 @@ wbrwtb:
                 .char $04       ;%000001 0 . to memory,   special handler
                 .char $04       ;%000001 0 . to memory,   special handler
 
+                .endsection DOS06
+
+                .section DOS07
+                
 help:                           ;*HELP DFS
                 tya             ;save command line offset
                 ldx #<(comtab-comtab-$01) ;point to DFS command table
@@ -6291,6 +6557,10 @@ argtbl:                         ;Table of syntax elements
                 .text $A8,"<rom>)" ;[D]
                 .text $FF
 
+                .endsection DOS07
+
+                .section DOS08
+
 compct:                         ;*COMPACT
                 jsr readrv      ;select specified or default volume
                 jsr vstrng      ;print "Compacting :"
@@ -6386,6 +6656,10 @@ cmpct4:
                 ldy cpycat
                 jsr prtinf      ;print *INFO line
                 jmp loopx       ;loop for next file
+
+                .endsection DOS08
+
+                .section DOS09
 
 chkena:                         ;Ensure *ENABLE active
                 bit enaflg      ;test *ENABLE flag
@@ -6559,6 +6833,10 @@ cpydsk:                         ;*BACKUP
 cpydk4:
                 jsr mvdkda      ;copy source drive/file to destination
                 jmp L93C0       ;load volume catalogue (which??)
+
+                .endsection DOS09
+
+                .section DOS10
 
 cpyfil:                         ;*COPY
                 jsr setwld      ;allow wildcard characters in filename
@@ -6771,6 +7049,10 @@ LA5D1:                          ;Set high word of OSFILE load address = $FFFF
                 rts
                 .endif
 
+                .endsection DOS10
+
+                .section DOS_rest
+                
 verify:                         ;*VERIFY
                 lda #$00        ;clear formatting flag
                 beq LA5E3       ;branch (always)
@@ -9957,6 +10239,8 @@ cmdtbl:
                 .char $80       ;OSGBPB 4=read data ignoring PTR
 
                 .endif
+
+                .endsection DOS_rest
 
                 .if BUGFIX
 *=$BFFF
