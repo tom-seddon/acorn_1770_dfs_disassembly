@@ -10,6 +10,10 @@ def main3(input_lines,f_out,options):
     opcode_column=16
     comment_column=32
 
+    reserved_64tass_renames={
+        'trunc':'trunc_',
+    }
+
     weak_re=re.compile(r'''^(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\?\s*(?P<value>.*)$''')
     cpu_re=re.compile(r'''^\s*CPU\s+(?P<value>.*)$''')
     org_re=re.compile(r'''^\s*ORG\s+(?P<value>.*)$''')
@@ -32,6 +36,9 @@ def main3(input_lines,f_out,options):
     def get_fixed_up_cond(cond):
         if cond.startswith('_'): cond=cond[1:]
         return cond
+
+    def get_renamed_label(label):
+        return reserved_64tass_renames.get(label,label)
 
     f_out.write('; automatically converted from: %s\n'%(options.input_path))
 
@@ -97,7 +104,8 @@ def main3(input_lines,f_out,options):
 
         m=label_re.match(input_line)
         if m is not None:
-            add('%s:'%(m.group('name')),None,comment)
+            label=get_renamed_label(m.group('name'))
+            add('%s:'%label,None,comment)
             continue
 
         m=if_re.match(input_line)
@@ -130,6 +138,12 @@ def main3(input_lines,f_out,options):
         if m is not None:
             instr=m.group('instr').lower()
 
+            if instr=='skipto':
+                add('*=%s'%m.group('operands'),
+                    None,
+                    comment)
+                continue
+
             if instr=='equb':
                 # docs say it's for signed 8-bit values, but it seems
                 # to handle the unsigned variety fine as well...
@@ -140,6 +154,9 @@ def main3(input_lines,f_out,options):
             
             operands=m.group('operands')
             if operands is not None:
+                # this basic approach is sufficient...
+                operands=get_renamed_label(operands)
+                
                 if operands=='A': operands='a'
                 else:
                     for suffix in [',X',',Y',',X)']:
