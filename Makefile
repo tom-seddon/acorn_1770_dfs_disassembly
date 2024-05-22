@@ -24,7 +24,15 @@ TASSARGS:=--nostart -Wall $(_TASSQ) --case-sensitive --line-numbers --verbose-li
 ##########################################################################
 
 .PHONY:build
-build:
+build: _folders
+	$(_V)$(TASS) $(TASSARGS) "dfs224.s65" -o "$(BUILD)/dfs224.bin" "-L$(BUILD)/dfs224.lst"
+	$(_V)$(PYTHON) "bin/romdiffs.py" -a "$(BUILD)" -b "orig" "dfs224.bin"
+
+##########################################################################
+##########################################################################
+
+.PHONY:convert_and_build
+convert_and_build:
 	$(_V)$(MAKE) _convert_and_build "OPTIONS="
 	$(_V)$(MAKE) _convert_and_build "OPTIONS=BUGFIX"
 	$(_V)$(MAKE) _convert_and_build "OPTIONS=FASTGB"
@@ -45,6 +53,9 @@ _convert_and_build: _folders
 	$(_V)$(PYTHON) "bin/convert_dfs_txt.py" "dfs224.asm.txt" -o "$(BUILD)/dfs224.s65"
 	$(_V)$(TASS) $(TASSARGS) $(_TASS_DEFINES) "$(BUILD)/dfs224.s65" -o "$(BUILD)/dfs224.bin" "-L$(BUILD)/dfs224.lst"
 	$(_V)$(SHELLCMD) cmp "$(BUILD)/dfs224.beebasm.bin" "$(BUILD)/dfs224.bin"
+
+##########################################################################
+##########################################################################
 
 .PHONY:_folders
 _folders:
