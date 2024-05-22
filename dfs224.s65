@@ -223,7 +223,12 @@ intnmi=$0D00                    ;NMI service routine
 ecowsp=$0D60                    ;Econet reserved area; end of NMI service routine
 priptr=$0DF0                    ;table of private pages to each ROM
 
+                .if dfs226
+base=$0e00                      ;start of user memory
+                .else
 base=$C000                      ;start of HAZEL extended memory
+                .endif
+                
 dirlow=base  +$0000             ;first sector of volume catalogue
 catlow=dirlow+$0008             ;first catalogue entry; filename
 catdun=catlow+$0000             ;b7=catalogue entry listed
@@ -330,8 +335,14 @@ seqdah=seqmap+$001D             ;MSB of starting LBA
 
 slots=seqmap+$0100              ;channel sector buffers
 
+                .if dfs226
+fdc=$fe84                     ;floppy drive interface control latch
+latch=$fe80                       ;base of floppy drive controller registers
+                .else
 latch=$FE24                     ;floppy drive interface control latch
 fdc=$FE28                       ;base of floppy drive controller registers
+                .endif
+                
 fdccmd=fdc   +$0000             ;WD 1770 command register (write only)
 fdcsta=fdc   +$0000             ;WD 1770 status register (read only)
 fdctrk=fdc   +$0001             ;WD 1770 track register
@@ -1799,6 +1810,14 @@ defcon:
                 jsr frmnm1      ;parse file spec from argument pointer
                 jsr L8271       ;search for file in catalogue
                 bcs defsuc      ;if found then execute it
+                .if dfs226
+                ; Not found - Bad command
+                jsr illmsg
+                .byte $fe
+                .text "command"
+                .byte 0
+                .else
+                ; Not found - try library FS
                 lda linptr+$00  ;[D]else get LSB of GSINIT pointer
                 adc linadr+$01  ;add offset of start of command line
                 tax             ;hold in X
@@ -1812,7 +1831,8 @@ L8867:
                 beq nobin       ;then raise "Bad command" error
                 .endif
                 jmp osfscm      ;[BUG]no infinite loop check like ADFS
-
+                .endif
+                
 defsuc:                         ;Execute command binary
                 lda cathig+$06,y ;[D]test exec address
                 jsr isoexe
@@ -2343,7 +2363,19 @@ L8BD8:
                 lda L00A2       ;get final controller status
                 jsr L8C0D       ;convert WD 1770 status to i8271 result
                 sta (temp),y    ;store in caller's control block
+                .if dfs226
+                ldx L00A7
+                cpx #$80
+                bne L8C2E_226
+                lda fdcsta
+                and #$20
+                ora (temp),y
+L8C2E_226:
+                .endif
                 pha             ;save status for return
+                .if dfs226
+                and #$df
+                .endif
                 cmp #$18        ;$18 = sector not found
                 bne L8BF1       ;if status matches
                 lda #$FF        ;then mark both drives uncalibrated
@@ -2754,6 +2786,9 @@ L8E29:                          ;type I command
                 ldy #$01        ;execute it once
                 sty L00A5
                 ora L00A4       ;apply stepping speed bits in b1,b0
+                .if dfs226
+                sta L00A7
+                .endif
                 sta fdccmd      ;send command to FDC
                 bit xtemp       ;if called from OSWORD $7F
                 bmi L8E1B       ;then wait for ISR and return status
@@ -2929,7 +2964,25 @@ L8F2F:
 L8F36:
                 rts
 
-L8F37:                          ;Set track stepping speed from CMOS RAM
+L8F37:                          ;Set track stepping speed from CMOS RAM/keyboard links
+
+                .if dfs226
+
+                lda #$ff        ;OSBYTE $FF = read/write keyboard links RAM copy
+                ldx #$00
+                tay
+                jsr osbyte
+                txa             ;A = keyboard links value
+                lsr a
+                lsr a
+                lsr a
+                lsr a           ;bits 0/1 = disk stepping rate
+                and #3
+                sta L00A4
+                rts
+
+                .else
+                
                 lda #$A1        ;OSBYTE $A1 = read CMOS RAM
                 ldx #$0B        ;$0B = ADFS start-up options, keyboard settings and floppy drive parameters
                 jsr osbyte
@@ -2940,6 +2993,8 @@ L8F37:                          ;Set track stepping speed from CMOS RAM
 L8F45:
                 sta L00A4       ;else set $00 = fastest stepping (6 ms)
                 rts
+
+                .endif
 
 L8F48:                          ;Install NMI service routine
                 ldx #L8FE4-L8F86-$01 ;set X=offset of last byte of routine
