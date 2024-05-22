@@ -4,3 +4,6 @@
 [submodule "submodules/shellcmd.py"]
 	path = submodules/shellcmd.py
 	url = https://github.com/tom-seddon/shellcmd.py
+[submodule "submodules/AcornDNFSv300"]
+	path = submodules/AcornDNFSv300
+	url = https://github.com/stardot/AcornDNFSv300
