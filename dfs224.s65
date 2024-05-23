@@ -1,4 +1,36 @@
 ; automatically converted from: dfs224.asm.txt
+                .if dfs226
+                ; Bodge/hack region
+;close=$9b58
+;delete=$8782
+;build=$abc5
+;dump=$ab46
+;list_=$ab04
+;roms=$a9d0
+;type_=$aafd
+;pmhelp=$ffff
+;LAEA9_226=$aea9
+;zerchk=$ac18
+;iprdec=$ac4e
+;dump3=$ab54
+;build4=$abbc
+;hmtbut=$ac62
+;tu_main=$36
+;tu_newbr=$16
+;tu_org52=$af79
+;tu_tout=$af35
+;tu_xxxl1=$af37
+;tu_adrral=$ffff
+;LACAF=$ffff
+;LB82B_226=$b82b
+;LB850_226=$b850
+;LBAB9_226=$bab9
+;LBA30_226=$ba30
+;LB4B5=$ffff
+                
+                .endif
+
+
 ;Disassembly of Acorn DFS 2.24
 ;Greg Cook, 20 May 2024
 
@@ -53,24 +85,6 @@ SQUEEZE=false                   ;Unreachable code removed and some routines shor
 dfs226=false
                 .endweak
 
-                .if dfs226
-                ; Bodge/hack region
-;close=$9b58
-;delete=$8782
-;build=$abc5
-;dump=$ab46
-;list_=$ab04
-;roms=$a9d0
-;type_=$aafd
-pmhelp=$ffff
-LAEA9_226=$aea9
-;zerchk=$ac18
-;iprdec=$ac4e
-;dump3=$ab54
-;build4=$abbc
-;hmtbut=$ac62
-                .endif
-                
 ;Bugs fixed by _BUGFIX:
 ;- LIBFS executable searches terminate (2.25)
 ;- OSWORD $7F drive parameter bit 3 enables double density
@@ -227,6 +241,10 @@ escflg=$00FF                    ;b7=0 normal, b7=1 ESCAPE pressed
 stack=$0100                     ;hardwired 6502 stack page
 errbuf=$0100                    ;error trampoline so a language ROM can print the message
 
+                .if dfs226
+brkv=$0202                      ;redirected by Tube host
+eventv=$0220                    ;redirected by Tube host
+                .endif
 bytev=$020A                     ;BYTEV vector, redirected by SRAM
 filev=$0212                     ;FILEV, first FS vector claimed by DFS
 fscv=$021E                      ;FSCV vector to control/shut down current FS
@@ -356,6 +374,17 @@ latch=$fe80                       ;base of floppy drive controller registers
 latch=$FE24                     ;floppy drive interface control latch
 fdc=$FE28                       ;base of floppy drive controller registers
                 .endif
+
+                .if dfs226
+tu_zram=$00
+tu_qram=tu_zram+$12             ;21/9/83
+tu_claimt=tu_qram+$02
+tu_claimer=tu_claimt+$01
+tu_zptube=tu_claimer+$01
+tu_wram=$0128
+tu_sram=$0700
+reptr=$00fd
+                .endif
                 
 fdccmd=fdc   +$0000             ;WD 1770 command register (write only)
 fdcsta=fdc   +$0000             ;WD 1770 status register (read only)
@@ -364,7 +393,13 @@ fdcsec=fdc   +$0002             ;WD 1770 sector register
 fdcdat=fdc   +$0003             ;WD 1770 data register
 romsw=$FE30                     ;ROMSEL paged ROM selection latch
 
+reg1stat=$FEE0                  ;Tube FIFO 1 status
+reg1=$FEE1                      ;Tube FIFO 1
+reg2stat=$FEE2                  ;Tube FIFO 2 status
+reg2=$FEE3                      ;Tube FIFO 2
 reg3=$FEE5                      ;Tube FIFO 3
+reg4stat=$FEE6                  ;Tube FIFO 4 status
+reg4=$FEE7                      ;Tube FIFO 4
 
 gsinit=$FFC2                    ;Initialise read
 gsread=$FFC5                    ;Read char
@@ -408,6 +443,7 @@ oscli=$FFF7                     ;Execute command line
                 .dsection DOS10_1
                 .dsection DOS10_2
                 .dsection DOS11
+                .dsection TUBE
                 .dsection SRAM
                 .dsection FASTGB
                 
@@ -444,10 +480,14 @@ lang:                           ;Language entry
 
                 .char $82       ;rom type: service only
                 .char copyr-lang ;copyright offset pointer
+                .if dfs226
+                .char $7b       ;version No.
+                .else
                 .char $79       ;version No.
+                .endif
                 .text "DFS",$00 ;title and terminator byte
                 .if dfs226
-                .text "2.26"
+                .text "2.26"    ;version string
                 .else
                 .text "2.24"    ;version string
                 .endif
@@ -836,8 +876,10 @@ info:                           ;FSC 10 = *INFO
                 jsr stxylp      ;allow wildcard characters in filename
                 .endif
                 jsr setwld
+                .if dfs226
+                jsr chksyn
+                .else
                 jsr setupr      ;call GSINIT with C=0
-                .if !dfs226
                 beq L826E       ;if no argument then raise "Bad name" error
                 .endif
                 jsr getlok      ;else ensure file matching spec in catalogue
@@ -3371,7 +3413,11 @@ L90C9:
 
 ;Table of drive control latch values for drives 0..3
 L90D1:
+                .if dfs226
+                .char $29,$2a,$2d,$2e
+                .else
                 .char $25,$26,$35,$36
+                .endif
 
 ;Table of WD 1770 commands
 L90D5:
@@ -5208,8 +5254,13 @@ init0:
                 bpl init0
                 lda #$A8        ;call OSBYTE $A8 = get ext. vector table addr
                 jsr readby
+                .if dfs226
+                sty temp+$01    ;set up pointer to vector table
+                stx temp+$00
+                .else
                 stx temp+$00    ;set up pointer to vector table
                 sty temp+$01
+                .endif
                 ldx #$07        ;7 vectors to transfer
                 ldy #$1B        ;y = $1B = offset of FILEV in extended vector table:
 init1:
@@ -5495,7 +5546,11 @@ dohelp:                         ;Service call $09 = *HELP
                 tya             ;else put command line offset in A for saving
                 inx             ;x = <(hlptab-comtab-$01)
                 inx
+                .if dfs226
+                ldy #$02        ;2 entries to print
+                .else
                 ldy #$01        ;1 entry to print
+                .endif
                 jmp help1       ;print list of *HELP keywords.
 
 ;[BUG] service call $0A overwrites private page with garbage
@@ -6245,7 +6300,7 @@ getlsz:                         ;Get start and size of user memory
 getmem:                         ;Claim shared workspace
                 .if dfs226
                 ldx #$a
-                jsr readsw
+                jsr doswcl
                 .endif
                 jsr suspri      ;[D]not sending service call $0A
                 ldy #colds-mainws ;set up pointer to private page
@@ -6349,8 +6404,8 @@ fscltb:
                 .char <(wdcat -$01) ;FSC  5 = *CAT                  $848E
                 .char <(wfdie -$01) ;FSC  6 = new FS starting up    $94FF
                 .char <(whlim -$01) ;FSC  7 = valid file handles    $94FA
-                .if !dfs226
                 .char <(wstus -$01) ;FSC  8 = *command entered      $9F73
+                .if !dfs226
                 .char <(ex    -$01) ;FSC  9 = *EX                   $8238
                 .char <(info  -$01) ;FSC 10 = *INFO                 $8257
                 .char <(wnota -$01) ;FSC 11 = *RUN from library     $8832
@@ -6366,8 +6421,8 @@ fschtb:
                 .char >(wdcat -$01)
                 .char >(wfdie -$01)
                 .char >(whlim -$01)
-                .if !dfs226
                 .char >(wstus -$01)
+                .if !dfs226
                 .char >(ex    -$01)
                 .char >(info  -$01)
                 .char >(wnota -$01)
@@ -6383,7 +6438,9 @@ filjpl:
                 .char <(fwratt-$01) ;OSFILE   4 = wr. attributes    $9FBC
                 .char <(frdcat-$01) ;OSFILE   5 = read catalog info $9F8D
                 .char <(fdefil-$01) ;OSFILE   6 = delete file       $9F96
+                .if !dfs226
                 .char <(dirdo -$01) ;OSFILE   7 = create file       $8A3D
+                .endif
                 .if BUGFIX
                 .char <(return-$01) ;OSFILE   8 = create directory
                 .char <(fwrlod-$01) ;OSFILE   9 = wr. timestamp
@@ -6401,7 +6458,9 @@ filjph:
                 .char >(fwratt-$01)
                 .char >(frdcat-$01)
                 .char >(fdefil-$01)
+                .if !dfs226
                 .char >(dirdo -$01)
+                .endif
                 .if BUGFIX
                 .char >(return-$01)
                 .char >(fwrlod-$01)
@@ -6452,12 +6511,20 @@ wbrwtb:
 help:                           ;*HELP DFS
                 tya             ;save command line offset
                 ldx #<(comtab-comtab-$01) ;point to DFS command table
+                .if dfs226
+                ldy #$14        ;20 entries to print
+                .else
                 ldy #$10        ;16 entries to print
+                .endif
 help1:
                 pha             ;save command line offset
                 jsr vstrng      ;print DFS banner
                 .char $0D
+                .if dfs226
+                .text "DFS 2.26"
+                .else
                 .text "DFS 2.24"
+                .endif
                 .char $0D
                 stx comtxt      ;save command table offset
                 sty vtemp+$01   ;[D]using counter in zp
@@ -6476,13 +6543,21 @@ help2:
                 ldx #<(hlptab-comtab-$03) ;point to *HELP keyword table
                 jmp wname0      ;scan next argument for *HELP keywords
 
-                .if SQUEEZE
+                .if SQUEEZE&&!dfs226
+                .else
+                .if dfs226
+pmhelp:
                 .else
                                 ;unreachable code
                                 ;was *HELP UTILS
+                .endif
                 tya
                 ldx #<(initbl-comtab-$01) ;point to utility command table
+                .if dfs226
+                ldy #$06        ;6 entries to print
+                .else
                 ldy #$01        ;1 entry to print
+                .endif
                 bne help1
                 .endif
 
@@ -7700,7 +7775,7 @@ roms:
                 jsr LAADD_226
                 sec
                 jsr gsinit
-                ldy ltemp
+                sty ltemp
                 clc
                 beq LA9FF_226
 
@@ -7817,8 +7892,8 @@ LAA9A_226:
                 sta romptr+1
                 jsr LAACF_226
                 sta ptemp
-                inc romptr+1
-                ldy #$1e        ;????
+                inc romptr+0
+                ldy #$1e        ;??
                 jsr LAAC2_226
                 bcs LAAB7_226
                 jsr pspace
@@ -7833,8 +7908,7 @@ LAAB8_226:
                 lda #$20
 LAABE_226:
                 jsr pchr
-                rts
-
+                dey
 LAAC2_226:
                 lda romptr+0
                 cmp ptemp
@@ -7898,12 +7972,12 @@ type0:
 type8:
                 jmp nofil
 type1:
-                jsr osbyte
+                jsr osbget
                 bcs type2       ;eof??
                 cmp #10         ;ignore LFs
                 beq type1
                 plp
-                bne type_
+                bne type4
                 pha
                 jsr iprdec
                 jsr pspace
@@ -8179,11 +8253,590 @@ LAA50:                          ;OSBYTE $00 = display MOS version
                 rts             ;[BUG]doesn't print version even if X=0 on entry
                 .endsection DOS11
 
+                .if dfs226
+                .section TUBE
+
+; At least some of the labels conflict with the DFS ones. So here,
+; they all have tu_ prefixes.
+
+tu_org53:
+                .logical $500
+tu_tasks:
+                .word tu_rdchz
+                .word tu_cli
+                .word tu_sbyte
+                .word tu_byte
+                .word tu_word
+                .word tu_rdln
+                .word tu_args
+                .word tu_bget
+                .word tu_bput
+                .word tu_find
+                .word tu_file
+                .word tu_gbpb
+
+tu_vstate:
+                .byte $86
+                .byte $88
+                .byte $96
+                .byte $98
+                .byte $18
+                .byte $18
+                .byte $82
+                .byte $18
+
+tu_bput:
+                jsr tu_newrc
+                tay
+                jsr tu_newrc
+                jsr osbput
+                jmp tu_qrply
+
+tu_bget:
+                jsr tu_newrc
+                tay
+                jsr osbget
+                jmp tu_rdchy
+
+tu_rdchz:
+                jsr osrdch
+tu_rdchy:
+                ror a           ;send C and A and go back to MAIN
+                jsr tu_rdcha
+                rol a
+                jmp tu_rply
+
+tu_find:
+                jsr tu_newrc
+                beq tu_finda
+                pha
+                jsr tu_strng
+                pla
+                jsr osfind
+                jmp tu_rply
+
+tu_finda:
+                jsr tu_newrc
+                tay
+                lda #0
+                jsr osfind
+                jmp tu_qrply
+
+tu_args:
+                jsr tu_newrc
+                tay
+                ldx #4
+tu_argsw:
+                jsr tu_newrc
+                sta@b (tu_zram-1)&$ff,x
+                dex
+                bne tu_argsw
+                jsr tu_newrc
+                jsr osargs
+                jsr tu_rdcha
+                ldx #3
+tu_argss:
+                lda 0,x
+                jsr tu_rdcha
+                dex
+                bpl tu_argss
+                jmp tu_main
+
+tu_strng:
+                ldx #<tu_sram
+                ldy #0
+tu_strnh:
+                jsr tu_newrc
+                sta tu_sram,y
+                iny
+                beq tu_strnj
+                cmp #13
+                bne tu_strnh
+tu_strnj:
+                ldy #>tu_sram
+                rts
+
+tu_cli:
+                jsr tu_strng
+                jsr oscli
+tu_qrply:
+                lda #$7f
+tu_rply:
+                bit reg2stat
+                bvc tu_rply
+                sta reg2
+tu_mj:
+                jmp tu_main
+
+tu_file:
+                ldx #$10
+tu_filea:
+                jsr tu_newrc
+                sta tu_zram+1,x
+                dex
+                bne tu_filea
+                jsr tu_strng
+                stx tu_zram+0
+                sty tu_zram+1
+                ldy #>tu_zram   ;X=<tu_zram
+                jsr tu_newrc
+                jsr osfile
+                jsr tu_rdcha
+                ldx #$10
+tu_fileb:
+                lda @b tu_zram+1,x
+                jsr tu_rdcha
+                dex
+                bne tu_fileb
+                beq tu_mj
+
+tu_gbpb:
+                ldx #$0d
+tu_gbpba:
+                jsr tu_newrc
+                sta @b (tu_zram-1)&$ff,x
+                dex
+                bne tu_gbpba
+
+                jsr tu_newrc
+                ldy #0
+                jsr osgbpb
+                pha
+                
+                ldx #$0c
+tu_gbpbb:
+                lda tu_zram,x
+                jsr tu_rdcha
+                dex
+                bpl tu_gbpbb
+                pla
+                jmp tu_rdchy
+
+tu_sbyte:
+                jsr tu_newrc
+                tax
+                jsr tu_newrc
+                jsr osbyte
+tu_sbytc:
+                bit reg2stat
+                bvc tu_sbytc
+                stx reg2
+tu_bytex:
+                jmp tu_main
+
+tu_byte:
+                jsr tu_newrc
+                tax
+                jsr tu_newrc
+                tay
+                jsr tu_newrc
+                jsr osbyte
+                eor #$9d
+                beq tu_bytex
+                ror a
+                jsr tu_rdcha
+tu_bytec:
+                bit reg2stat
+                bvc tu_bytec
+                sty reg2
+                bvs tu_sbytc
+tu_word:
+                jsr tu_newrc
+                tay
+tu_worda:
+                bit reg2stat
+                bpl tu_worda
+                ldx reg2
+                dex
+                bmi tu_wordc
+tu_wordb:
+                bit reg2stat
+                bpl tu_wordb
+                lda reg2
+                sta tu_wram,x
+                dex
+                bpl tu_wordb
+                tya
+tu_wordc:
+                ldx #<tu_wram
+                ldy #>tu_wram
+                jsr osword
+tu_wordd:
+                bit reg2stat
+                bpl tu_wordd
+                ldx reg2
+                dex
+                bmi tu_woren
+tu_worde:
+                ldy tu_wram,x
+tu_wordf:
+                bit reg2stat
+                bvc tu_wordf
+                sty reg2
+                dex
+                bpl tu_worde
+tu_woren:
+                jmp tu_main
+
+tu_rdln:
+                ldx #$04
+tu_rdlna:
+                jsr tu_newrc
+                sta tu_zram,x
+                dex
+                bpl tu_rdlna
+                inx
+                ldy #>tu_zram
+                txa
+                jsr osword
+                bcc tu_rdlnc
+                lda #$ff
+                jmp tu_rply
+
+tu_rdlnc:
+                ldx #$00
+                lda #$7f
+                jsr tu_rdcha
+tu_rdlnd:
+                lda tu_sram,x
+tu_rdlne:
+                jsr tu_rdcha
+                inx
+                cmp #$0d
+                bne tu_rdlnd
+                jmp tu_main
+
+tu_rdcha:
+                bit reg2stat
+                bvc tu_rdcha
+                sta reg2
+                rts
+
+tu_wrifor:
+                bit reg4stat
+                bvc tu_wrifor
+                sta reg4
+                rts
+
+tu_escape:
+                lda escflg
+                sec
+                ror a
+                bmi tu_esca
+tu_event:
+                pha
+                lda #$00
+                jsr tu_esca
+                tya
+                jsr tu_esca
+                txa
+                jsr tu_esca
+                pla
+tu_esca:
+                bit reg1stat
+                bvc tu_esca
+                sta reg1
+                rts
+
+tu_newrc:
+                bit reg2stat
+                bpl tu_newrc
+                lda reg2
+                rts
+                
+                .endlogical
+
+LAEA9_226:
+                cmp #9
+                bne tu_there1
+                tya
+                pha
+                lda (linptr),y
+                cmp #13
+                bne LAED3_226
+
+                lda #$e9        ;OSBYTE $E9 = read system VIA IRQ mask (and return Tube presence flag in Y)
+                jsr readby
+                ldx romid
+                tya
+                beq LAED3_226
+                jsr vstrng
+                .text 13,"TUBE HOST 2.30",13
+                nop
+LAED3_226:
+                pla
+                tay
+                lda #9
+tu_there1:
+                cmp #$fe
+                bcc tu_xxxl1
+                bne tu_tgo
+                cpy #0
+                beq tu_xxxl1
+                ldx #6          ;explode all characters
+                lda #$14        ;OSBYTE $14 = explode soft character RAM allocation
+                jsr osbyte
+tu_tmessa:
+                bit reg1stat
+                bpl tu_tmessa
+                lda reg1
+                beq tu_tout
+                jsr oswrch
+                jmp tu_tmessa
+
+tu_tgo:
+                lda #<tu_event
+                sta eventv+0
+                lda #>tu_event
+                sta eventv+1
+
+                lda #<tu_newbr
+                sta brkv+0
+                lda #>tu_newbr
+                sta brkv+1
+
+                lda #$8e
+                sta reg1stat
+
+                ldy #0
+tu_cloop:
+                lda tu_org52,y
+                sta $400,y
+                lda tu_org53,y
+                sta $500,y
+                lda tu_org53+$100,y
+                sta $600,y
+                dey
+                bne tu_cloop
+
+                jsr tu_adrral
+
+                ldx #tu_zcode_end-tu_zcode
+tu_floop:
+                lda tu_zcode,x
+                sta tu_zptube,x
+                dex
+                bpl tu_floop
+
+tu_tout:
+                lda #$00
+tu_xxxl1:
+                rts
+
+tu_zcode:
+                .logical tu_zptube
+tu_newbr:
+                lda #$ff
+                jsr tu_wrifor
+                lda reg2
+                lda #$00
+                jsr tu_rdcha
+                tay
+                lda (reptr),y
+                jsr tu_rdcha
+tu_newba:
+                iny
+                lda (reptr),y
+                jsr tu_rdcha
+                tax
+                bne tu_newba
+tu_tstart:
+                ldx #$ff
+                txs
+                cli
+tu_main:
+                bit reg1stat
+                bpl tu_maina
+tu_mainb:
+                lda reg1
+                jsr oswrch
+tu_maina:
+                bit reg2stat
+                bpl tu_main
+                bit reg1stat
+                bmi tu_mainb
+                ldx reg2
+                stx tu_jram+1
+tu_jram:
+                jmp (tu_tasks)
+tu_sadr:
+                .dword $8000
+                
+                .endlogical
+tu_zcode_end:
+
+tu_org52:
+                .logical $400
+                jmp tu_begin
+                jmp tu_escape
+tu_adrr:
+                cmp #$80
+                bcc tu_addrok
+                cmp #$c0
+                bcs tu_addrw
+                ora #$40
+                cmp tu_claimer
+                bne tu_addrwz ;don't release, someone else (may of course be already released)
+tu_adrrel:
+                php             ;Bruce 27/2/86
+                sei             ;Bruce 27/2/86
+                lda #$05        ;tell 2nd processor transfer has stopped
+                jsr tu_wrifor
+                lda tu_claimer
+                jsr tu_wrifor
+                plp             ;Bruce 27/2/86
+tu_adrral:
+                lda #$80
+                sta tu_claimer  ;** 18/1/84 ** 2's bug in FS
+                sta tu_claimt
+                rts
+
+tu_addrw:
+                asl tu_claimt
+                bcs tu_addrwa   ;got it
+                cmp tu_claimer
+                beq tu_addrwz   ;same loony again so tell him ok
+                clc
+                rts
+
+tu_addrwa:
+                sta tu_claimer
+tu_addrwz:
+                rts
+
+tu_addrok:
+                php             ;Jes
+                sei             ;critical region
+                sty tu_qram+1
+                stx tu_qram+0
+                jsr tu_wrifor
+                tax
+                ldy #$03
+                lda tu_claimer  ;inform 2nd processor of user
+                jsr tu_wrifor
+tu_adrrb:
+                lda (tu_qram),y
+                jsr tu_wrifor
+                dey
+                bpl tu_adrrb
+
+                ldy #$18        ;clear M and V flags
+                sty reg1stat
+                lda tu_vstate,x ;tube flags state
+                sta reg1stat
+                lsr a
+                lsr a
+                bcc tu_adrrwp
+                bit reg3        ;** 10/1/84 **
+                bit reg3        ;** 10/1/84 **
+tu_adrrwp:
+                jsr tu_wrifor   ;** 10/1/84 **
+tu_adrrwt:
+                bit reg4stat    ;synchronising byte
+                bvc tu_adrrwt
+                bcs tu_adrrp
+                cpx #$04
+                bne tu_anrts
+tu_adrrgo:
+                jsr tu_adrrel   ;implicit release
+                jsr tu_rdcha
+                jmp tu_tstart
+
+tu_adrrp:
+                lsr a
+                bcc tu_anrts
+                ldy #$88
+                sty reg1stat    ;set M fag
+tu_anrts:
+                plp             ;restore interrupt status *** Jes
+                rts
+
+tu_begin:
+                cli
+                bcs tu_beginr   ;carry preserved from BEGIN
+                bne tu_begink
+                jmp tu_qrply
+
+tu_begink:
+                ldx $028d       ;read last BREAK type
+                beq tu_adrrgo
+tu_beginr:
+                lda #$ff
+                jsr tu_adrr
+                bcc tu_beginr
+                jsr tu_setadr
+tu_sendw:
+                php             ;Bruce 27/2/86 (commented out in DNFS v300)
+                sei             ;Bruce 27/2/86 (commented out in DNFS v300)
+                lda #$07
+                jsr tu_taddr
+                ldy #$00
+                sty tu_zram+0
+tu_sendl:
+                lda (tu_zram),y
+                sta reg3
+                nop
+                nop
+                nop
+                iny
+                bne tu_sendl
+                plp             ;Bruce 27/2/86 (commented out in DNFS v300)
+                inc tu_sadr+1
+                bne tu_sendt
+                inc tu_sadr+2
+                bne tu_sendt
+                inc tu_sadr+3
+tu_sendt:
+                inc tu_zram+1
+                bit tu_zram+1
+                bvc tu_sendw
+                jsr tu_setadr
+                lda #$04
+tu_taddr:
+                ldy #>tu_sadr
+                ldx #<tu_sadr
+                jmp tu_adrr
+
+tu_setadr:
+                lda #$80
+                sta tu_sadr+1
+                sta tu_zram+1
+                lda #$20
+                and $8006
+                tay             ;**** Jes
+                sty tu_sadr+0
+                beq tu_begina
+                ldx $8007
+tu_beginl:
+                inx
+                lda $8000,x
+                bne tu_beginl
+                lda $8001,x
+                sta tu_sadr+0
+                lda $8002,x
+                sta tu_sadr+1
+                ldy $8003,x
+                lda $8004,x
+tu_begina:
+                sta tu_sadr+3
+                sty tu_sadr+2
+                rts
+                .endlogical
+                
+                .endsection
+                .endif
+
                 .section SRAM
 ;Start of SRAM 1.04
 
 LAA64:                          ;Text of *HELP SRAM
-                .text $0A,"SRAM 1.04",$0D,$0A
+                .text $0A
+                .if dfs226
+                .text "SRAM 1.05"
+                .else
+                .text "SRAM 1.04"
+                .endif
+                .text $0D,$0A
                 .text "  SRDATA  <id.>",$0D,$0A
                 .text "  SRLOAD  <filename> <sram address> (<id.>) (Q)",$0D,$0A
                 .text "  SRREAD  <dest. start> <dest. end> <sram start> (<id.>)",$0D,$0A
@@ -8191,6 +8844,9 @@ LAA64:                          ;Text of *HELP SRAM
                 .text "  SRSAVE  <filename> <sram start> <sram end> (<id.>) (Q)",$0D,$0A
                 .text "  SRWRITE <source start> <source end> <sram start> (<id.>)",$0D,$0A
                 .text "End addresses may be replaced by +<length>",$0D,$0A
+                .if dfs226
+                .byte 0
+                .endif
 
 LAB9F:                          ;Paged ROM service
                 jsr L9ADE       ;offer service call to DFS
@@ -8206,6 +8862,9 @@ LAB9F:                          ;Paged ROM service
                 ldx romid       ;put paged ROM slot number back in X
                 jsr LB1FB       ;set up pointer to private page
                 bit L00B8+$01   ;test MSB of pointer
+                .if dfs226
+                bmi LABF7       ;if address >= $8000 then quit
+                .else
                 bpl LABBA       ;if address < $8000 then test b14
                 bvc LABF7       ;if $8000 <= addr < $C000 then quit
                 bvs LABBC       ;else addr >= $C000, handle call (always)
@@ -8213,6 +8872,7 @@ LAB9F:                          ;Paged ROM service
 LABBA:
                 bvs LABF7       ;if $4000 <= addr < $8000 then quit
 LABBC:
+                .endif
                 cmp #$08
                 bne LABF0
                 lda worda       ;Service call $08 = unrecognised OSWORD
@@ -8274,6 +8934,21 @@ LAC15:
                 bne LAC32
                 jsr LB3C5       ;Service call $04 = unrecognised OSCLI
                 bcs LABF7       ;scan for keyword in table
+                .if dfs226
+                cpx #4
+                beq LABF7
+                jsr LB234_226
+                jmp LABC9
+
+LB234_226:
+                lda LBA30_226+0,x
+                pha
+                lda LBA30_226+1,x
+                pha
+                rts
+
+                .else
+                
                 asl a           ;double keyword number for use as offset
                 beq LABF7       ;if keyword 0 (SRAM) then quit
                 tax             ;else transfer to X as index
@@ -8283,6 +8958,8 @@ LAC15:
                 sta L00B0+$01   ;store in zero page
                 jsr LACAF       ;call routine at action address
                 jmp LABC9       ;claim service call and quit handler.
+
+                .endif
 
 LAC32:
                 cmp #$07
@@ -8294,8 +8971,19 @@ LAC32:
 LAC3E:
                 lda (L00B8),y   ;get byte from private page at offset in Y
                 and #$3F        ;clear bits 7 and 6
+                .if dfs226
+                sta L00B0
+                ldy #srwork+$10 ;Y=$FE
+                lda (L00B8),y
+                and #8
+                asl a
+                asl a
+                asl a
+                asl a
+                ora L00B0
+                .endif
                 sta wordx       ;return value on exit from OSBYTE in X
-                .if SQUEEZE
+                .if SQUEEZE&&!dfs226
                 bpl LABC9       ;claim service call and quit handler.
                 .else
                 jmp LABC9       ;claim service call and quit handler.
@@ -8330,13 +9018,39 @@ LAC67:
                 jmp LABF7       ;quit service call handler.
 
 LAC6A:                          ;*HELP listing for SRAM
-                .text $0A,"SRAM 1.04",$0D,$0A ;LF, "SRAM 1.04", CR, LF
+                .text $0a
+                .if dfs226
+                .text "SRAM 1.05"
+                .else
+                .text "SRAM 1.04"
+                .endif
+                .text $0D,$0A          ;LF, "SRAM 1.04", CR, LF
                 .text "  SRAM",$0D,$0A ;indent 2 spaces, "SRAM" keyword, CR, LF
 
 ;[BUG] *HELP with multiple keywords is ignored.  Only *HELP SRAM is accepted.
 
 LAC7E:                          ;*HELP with keyword
                 jsr LB3C5       ;scan for keyword in table
+
+                .if dfs226
+
+                cpx #4
+                beq LB2B2_226
+                lda #0
+LB2A0_226:
+                tax
+                iny
+                lda (linptr),y
+                cmp #13
+                beq LAC67
+                cmp #$20
+                beq LB2A0_226
+                cpx #$20
+                bne LB2A0_226
+                beq LAC7E
+              
+                .else
+                
                 bcc LAC8F       ;if match found then check keyword number
                 lda (linptr),y  ;else mismatch.  test first char of keyword
                 cmp #$2E        ;is it a dot?
@@ -8350,6 +9064,12 @@ LAC8F:                          ;*HELP with matching keyword
 LAC92:                          ;*HELP SRAM
                 jsr LB477       ;test for end of command line
                 bcs LAC67       ;if characters present then quit svc handler
+
+                .endif
+                
+                .if dfs226
+LB2B2_226:
+                .endif
                 ldy #$00        ;can save 2 bytes by printing whole page last
 LAC99:
                 lda LAA64+$0000,y ;print first page of *HELP SRAM
@@ -8358,12 +9078,20 @@ LAC99:
                 bne LAC99
 LACA2:
                 lda LAA64+$0100,y ;print second page of *HELP SRAM
+                .if dfs226
+                beq LAC67
+                .endif
                 jsr oswrch
                 iny
+                .if !dfs226
                 cpy #<(LAB9F-LAA64) ;compare offset with (length of text - 256)
+                .endif
                 bne LACA2       ;loop until partial second page printed
+                .if !dfs226
                 beq LAC67       ;then quit service call handler.
+                .endif
 
+                .if !dfs226
 LACAF:                          ;Jump to action address
                 jmp ($00B0)
 
@@ -8371,6 +9099,7 @@ LACAF:                          ;Jump to action address
                 .else
                                 ;unreachable code
                 rts
+                .endif
                 .endif
 
 LACB3:                          ;OSWORD $43 = load/save sideways RAM
@@ -8394,12 +9123,14 @@ LACCC:
                 cli             ;then enable interrupts:
 LACD2:                          ;Load/save sideways RAM
                 jsr LB1FB       ;set up pointer to private page
+                .if !dfs226
                 lda #$00        ;OSARGS 0,0 = return current temporary filing system
                 tay
                 ldx #L00BA      ;x = scratch space pointer, unused
                 jsr osargs
                 pha             ;save current FS
                 jsr LB1FB       ;set up pointer to private page
+                .endif
                 ldy #srwork+$04 ;XY+4 = LSB of start address
                 lda (L00B8),y   ;get LSB of address
                 tax             ;hold in X
@@ -8436,10 +9167,18 @@ LAD0B:
                 eor (L00B8),y   ;compare OSWORD addressing mode
                 and #$40        ;with addressing mode of slot, mask result
                 bne LACF7       ;if unequal then raise "Illegal parameter" error
+                .if dfs226
+                tay
+                ldx #L00BA
+                jsr osargs
+                jsr LB1FB
+                tax
+                .else
                 pla             ;else restore current temporary FS
                 .if SQUEEZE
                 .else
                 tax             ;redundant
+                .endif
                 .endif
                 bne LAD26       ;if FS = 0
                 ldx #$02        ;then error 2, "No filing system"
@@ -8630,7 +9369,15 @@ LAE35:                          ;Raise "Illegal address" error
                 jmp LB2CB       ;raise error by internal number
 
 LAE3A:
+                .if dfs226
+                ldx #18
+LB44D_226:
+                pla
+                dex
+                bne LB44D_226
+                .else
                 jsr LB23D       ;pop 18 bytes from stack
+                .endif
                 bit LAF65       ;set V=1, default to loading in one (OSFILE)
                 lda L00BA+$00   ;test 3MSB and LSB of OSFILE object length
                 ora L00BA+$01
@@ -8682,7 +9429,15 @@ LAE5C:
                 lda #$FF        ;OSFILE $FF = load file
                 jsr osfile      ;call OSFILE
                 jsr LB1FB       ;set up pointer to private page
+                .if dfs226
+                ldx #18
+LB4A8_226:
+                pla
+                dex
+                bne LB4A8_226
+                .else
                 jsr LB23D       ;pop 18 bytes from stack
+                .endif
                 jmp LAE9D
 
 LAE98:
@@ -8803,7 +9558,15 @@ LAF47:
                 lda #$00        ;OSFILE   0 = save file
                 jsr osfile      ;call OSFILE
                 jsr LB1FB       ;set up pointer to private page
+                .if dfs226
+                ldx #$12
+LB578_226:
+                pla
+                dex
+                bne LB578_226
+                .else
                 jsr LB23D
+                .endif
                 jmp LAED2       ;close SWRAM image file (redundant) and exit
 
 LAF65:                          ;constant with b6=1 for setting V with BIT
@@ -8856,7 +9619,14 @@ LAF7E:                          ;Transfer buffer to sideways RAM image
                 ldy #>stack     ;point XY to new OSGBPB block in stack page
                 jsr osgbpb      ;call OSGBPB
                 ldx #$0D        ;control block size = 13 bytes
+                .if dfs226
+LB5C6_226:
+                pla
+                dex
+                bne LB5C6_226
+                .else
                 jsr LB23F       ;pop X bytes from stack
+                .endif
                 jsr LB1FB       ;set up pointer to private page and exit
                 rts
 
@@ -8975,13 +9745,26 @@ LB044:                          ;Increment transfer address
                 .endif
                 jsr LB070       ;then increment sideways RAM slot number
                                 ;[BUG]does not restart at $8010??
+                .if dfs226
+                ; same bug fix as above
+                lda #<(LB263-LB253+lang) ;then reset it to $8010
+                sta L00BD+$00
+                lda #>(LB263-LB253+lang)
+                sta L00BD+$01
+                .endif
 LB061:
+                .if dfs226
+                ldx #L00BD
+                ldy #srwork+$04
+                jsr LB21E
+                .else
                 lda L00BD+$00   ;get LSB of updated address
                 ldy #srwork+$04 ;XY+4 = LSB of start address
                 sta (L00B8),y   ;store LSB in OSWORD workspace
                 lda L00BD+$01   ;get MSB of updated address
                 iny             ;XY+5 = MSB of start address
                 sta (L00B8),y   ;store MSB in OSWORD workspace and exit
+                .endif
                 rts
 
 LB06D:
@@ -8992,8 +9775,24 @@ LB070:                          ;Increment sideways RAM slot number
                 lda (L00B8),y   ;get paged ROM slot number from OSWORD wksp
                 clc             ;increment slot number
                 adc #$01
+                .if dfs226
+                cmp #$10        ;if past 15, highest RAM slot on B/B+
+                .else
                 cmp #$08        ;if past 7, highest RAM slot on Master 128
+                .endif
                 bcs LB06D       ;then raise "Illegal address" error
+                .if dfs226
+                ; don't understand what this is checking for exactly,
+                ; but it must be related to the B+ sideways RAM
+                ; assignments??
+                cmp #2
+                beq LB06D
+                cmp #$0e
+                bne LB6A6_226
+                ldy #srwork+$10
+                and (L00B8),y
+LB6A6_226:
+                .endif
                 .if SQUEEZE
                 .else
                 ldy #srwork+$03 ;else XY+3 = ROM ID (redundant)
@@ -9061,18 +9860,36 @@ LB0BB:                          ;Convert RAM pseudo-slot to real slot
 
 LB0C0:
                 tya             ;else map to real slot number
+
+                .if dfs226
+
+                sec
+                sbc #$04        ;put in range W=12/X=13/Y=14/Z=15
+                tay
+                cpy #$E
+                bcs LB6F5_226   ;taken if Y/Z
+                rts
+
+                .else
+                
                 sec             ;on the Master 128, RAM is in slots 4 to 7
                 sbc #$0C        ;so just subtract 12
                 tay             ;and return result in Y.
                 rts
 
-                .if SQUEEZE
+                .endif
+
+                .if SQUEEZE&&!dfs226
+                .else
+                .if dfs226
+LB6F5_226:
                 .else
                                 ;unreachable code
+                .endif
                 tya
                 and #$01
-                ldy #$FE
-                ora (L00B8),y
+                ldy #srwork+$10
+                ora (L00B8),y   ;select 0/1 or E/F, as per link link S13
                 tay
                 rts
                 .endif
@@ -9105,13 +9922,25 @@ LB0E9:
 LB0F6:
                 rts             ;else A=0, slot Y absolutely addressed
 
-;Table of sideways RAM banks installed in the Master 128
 LB0F7:
+                .if dfs226
+
+;Table of sideways RAM banks installed in the B+128
+                .char $04,$08,$00,$00 ;RAM in banks 0-1, no RAM in 2-3
+                .char $00,$00,$00,$00 ;no RAM in banks 4-7
+                .char $00,$00,$00,$00 ;no RAM in banks 8-11
+                .char $01,$02,$10,$20 ;RAM in som set of 12-13 or 14-15
+
+                .else
+
+;Table of sideways RAM banks installed in the Master 128
                 .char $00,$00,$00,$00 ;no RAM in slots 0 to 3
                 .char $01,$02,$04,$08 ;bit masks of RAM banks 0 to 3
                 .char $00,$00,$00,$00 ;no RAM in slots 8 to 11
                 .char $00,$00,$00,$00 ;no RAM in slots 12 to 15
 
+                .endif
+                
 LB107:                          ;SWRAM write code copied to private page
                 sty romid       ;set MOS copy of ROMSEL from Y
                 sty romsw       ;page in sideways RAM slot in Y
@@ -9151,6 +9980,11 @@ LB12B:
                 lda L00BF       ;restore A from temp and exit.
                 rts
 
+                .if dfs226
+LACAF:                          ;Jump to action address
+                jmp ($00B0)
+                .endif                
+
 LB142:                          ;SWRAM transfer code pushed on stack
                 sta romid       ;set MOS copy of ROMSEL from A
                 sta romsw       ;set ROMSEL, select slot number in A
@@ -9171,47 +10005,10 @@ LB153:
                 sta romid       ;set MOS copy of ROMSEL from A
                 sta romsw       ;page SRAM back in
                 jmp LB182       ;jump back into ROM to finish
-
-LB163:                          ;Transfer data to sideways RAM
-                lda L00B5+$00   ;test number of bytes to transfer
-                ora L00B5+$01
-                beq LB198       ;if zero then nothing to do, exit
-                ldx #LB163-LB142-$01 ;else transfer code has offsets 0..32:
-LB16B:
-                lda LB142,x     ;get byte of SWRAM transfer code
-                pha             ;push on stack
-                dex             ;loop until 33 bytes of code pushed
-                bpl LB16B
-                tsx             ;point X to empty slot before routine.
-                lda romid       ;get our paged ROM slot number
-                pha             ;push onto stack where X points
-                lda #>stack     ;form MSB of routine call address
-                pha             ;push $01 on stack
-                txa             ;A = (start of routine)-$01
-                pha             ;push LSB of routine call address
-                lda L00B0a      ;get sideways RAM bank number in A
-                ldx L00B5+$01   ;get MSB transfer size (no. pages) in X
-                ldy #$00        ;clear offset, start transfer at pointers
-                rts             ;jump to SWRAM transfer code on stack
-
-LB182:
-                ldx #LB163-LB142 ;$21 = transfer code size
-                jsr LB23F       ;pop X bytes from stack
-                ldx #$02        ;point X to destination address:
-LB189:
-                lda L00B1,x     ;get LSB of address
-                clc             ;add number of bytes transferred
-                adc L00B5+$00
-                sta L00B1,x     ;update LSB of address
-                bcc LB194       ;carry out to MSB
-                inc L00B1+$01,x
-LB194:
-                dex             ;point X to source address
-                dex
-                bpl LB189       ;and loop once to update source address.
-LB198:
-                rts
-
+LB142_end:
+                
+                .if dfs226
+                ; dup of other LB199 below
 LB199:                          ;Transfer (L00BE) bytes to sideways RAM
                 ldy #srwork+$03 ;XY+3 = ROM ID
                 lda (L00B8),y   ;get paged ROM slot number from OSWORD wksp
@@ -9240,10 +10037,94 @@ LB199:                          ;Transfer (L00BE) bytes to sideways RAM
 LB1B2:
                 ldx L00BE+$00   ;set XY from L00BE:
                 ldy L00BE+$01
+LB1B6:
+                stx L00B5+$00   ;set number of bytes to transfer from XY
+                sty L00B5+$01
+                ; fall through to transfer data to sideways RAM
+                .endif                
+
+LB163:                          ;Transfer data to sideways RAM
+                lda L00B5+$00   ;test number of bytes to transfer
+                ora L00B5+$01
+                beq LB198       ;if zero then nothing to do, exit
+                ldx #LB142_end-LB142-$01 ;else transfer code has offsets 0..32:
+LB16B:
+                lda LB142,x     ;get byte of SWRAM transfer code
+                pha             ;push on stack
+                dex             ;loop until 33 bytes of code pushed
+                bpl LB16B
+                tsx             ;point X to empty slot before routine.
+                lda romid       ;get our paged ROM slot number
+                pha             ;push onto stack where X points
+                lda #>stack     ;form MSB of routine call address
+                pha             ;push $01 on stack
+                txa             ;A = (start of routine)-$01
+                pha             ;push LSB of routine call address
+                lda L00B0a      ;get sideways RAM bank number in A
+                ldx L00B5+$01   ;get MSB transfer size (no. pages) in X
+                ldy #$00        ;clear offset, start transfer at pointers
+                rts             ;jump to SWRAM transfer code on stack
+
+LB182:
+                ldx #LB142_end-LB142 ;$21 = transfer code size
+                .if dfs226
+LB7D7_226:
+                pla
+                dex
+                bne LB7D7_226
+                .else
+                jsr LB23F       ;pop X bytes from stack
+                .endif
+                ldx #$02        ;point X to destination address:
+LB189:
+                lda L00B1,x     ;get LSB of address
+                clc             ;add number of bytes transferred
+                adc L00B5+$00
+                sta L00B1,x     ;update LSB of address
+                bcc LB194       ;carry out to MSB
+                inc L00B1+$01,x
+LB194:
+                dex             ;point X to source address
+                dex
+                bpl LB189       ;and loop once to update source address.
+LB198:
+                rts
+
+                .if !dfs226
+                ; dup of other LB199 above
+LB199:                          ;Transfer (L00BE) bytes to sideways RAM
+                ldy #srwork+$03 ;XY+3 = ROM ID
+                lda (L00B8),y   ;get paged ROM slot number from OSWORD wksp
+                sta L00B0a      ;store ROM slot number in zero page
+                .if SQUEEZE
+                lda #$00        ;clear b7..b2
+                rol a           ;set b1 from carry flag, writing to SWRAM
+                sec             ;set b0=1
+                rol a
+                sta L00B7       ;store resulting flag in zero page
+                jsr LB22B       ;test OSWORD mode bits
+                bvs LB1BD       ;if b6=1, pseudo-addressing then branch
+                .else
+                ldx L00BE+$00   ;set XY=number of bytes to transfer
+                ldy L00BE+$01   ;can save 4 bytes (fall through to LB1B2)
+                lda #$00        ;clear b7..b2
+                rol a           ;set b1 from carry flag, writing to SWRAM
+                asl a           ;set b0=1
+                sta L00B7       ;store resulting flag in zero page
+                inc L00B7       ;can save 1 byte (SEC:ROL A)
+                jsr LB22B       ;test OSWORD mode bits
+                bvs LB1BD       ;if b6=1, pseudo-addressing then branch
+                bvc LB1B6       ;[BUG] should be BVC before BVS
+                .endif
+                
+LB1B2:
+                ldx L00BE+$00   ;set XY from L00BE:
+                ldy L00BE+$01
 LB1B6:                          ;Transfer XY bytes to sideways RAM
                 stx L00B5+$00   ;set number of bytes to transfer from XY
                 sty L00B5+$01
                 jmp LB163       ;and transfer data to sideways RAM.
+                .endif
 
 LB1BD:                          ;using pseudo-addressing.
                 lda #$00        ;set A = LSB of end of SWRAM window, $C000
@@ -9278,6 +10159,9 @@ LB1BD:                          ;using pseudo-addressing.
                 jmp LB1BD       ;and loop back to transfer more.
 
 LB1FB:                          ;Set up pointer to private page
+                .if dfs226
+                php
+                .endif
                 pha             ;save AX
                 txa
                 pha
@@ -9289,6 +10173,9 @@ LB1FB:                          ;Set up pointer to private page
                 pla             ;restore AX and exit.
                 tax
                 pla
+                .if dfs226
+                plp
+                .endif
                 rts
 
 LB20D:                          ;Copy word from private page to general pointer
@@ -9323,16 +10210,26 @@ LB22B:                          ;Test OSWORD mode bits
                 pha
                 ldy #srwork+$00 ;XY+0 = OSWORD mode bits/RAM bitmap
                 lda (L00B8),y   ;get mode bits in b7,b6
+                .if dfs226
+                sta L00B8+0     ;reuse pointer as a temp
+                .else
                 sta L00F6       ;romptr+$00 used as a temp
+                .endif
                 pla             ;restore AY
                 tay
                 pla
+                .if dfs226
+                bit L00B8       ;return N=load to SWRAM, V=use pseudo-addressing
+                jsr LB1FB
+                .else
                 bit L00F6       ;return N=load to SWRAM, V=use pseudo-addressing
+                .endif
                 rts
 
 LB23A:                          ;Issue Filing System Call
                 jmp (fscv)
 
+                .if !dfs226
 LB23D:                          ;Pop 18 bytes from stack
                 ldx #$12
 LB23F:                          ;Pop X bytes from stack
@@ -9352,6 +10249,7 @@ LB23F:                          ;Pop X bytes from stack
                 tya             ;restore LSB return address
                 pha             ;push on stack
                 rts             ;return to caller.
+                .endif
 
 LB253:                          ;Header copied to pseudo-addressed RAM banks
                 rts             ;$8000, language entry: return
@@ -9428,6 +10326,18 @@ LB2C5:
 LB2C7:
                 dey             ;decrement bank number
                 bpl LB279       ;loop until banks 15..0 tested, then exit.
+                .if dfs226
+                ldy #srwork+$00
+                lda (L00B8),y
+                ldx #0
+                and #$0c
+                bne LB8F5_226
+                ldx #$e
+LB8F5_226:
+                txa
+                ldy #srwork+$10
+                sta (L00B8),y
+                .endif
                 rts
 
 LB2CB:                          ;Raise error by internal number
@@ -9570,6 +10480,81 @@ LB3BE:                          ;return C=1, A=$FF = valid ROM not found
                 bcs LB3A2
 
 LB3C5:                          ;Scan for keyword in table
+
+                .if dfs226
+
+                ; Annoyingly, it looks like this whole bit got
+                ; basically rewritten at some point. Different command
+                ; table format and everything.
+                ldx #0
+LB9F7_226:
+                tya
+                pha
+LB9F9_226:
+                lda (linptr),y
+                bmi LBA10_226
+                cmp #'.'
+                beq LBA19_226
+                cmp #'A'
+                bcc LBA10_226
+                eor LBA30_226,x
+                and #$df
+                bne LBA15_226
+                iny
+                inx
+                bne LB9F9_226
+
+LBA10_226:
+                lda LBA30_226,x
+                bmi LBA28_226
+
+LBA15_226:
+                clc
+                pla
+                tay
+                dey
+LBA19_226:
+                iny
+LBA1A_226:
+                inx
+                lda LBA30_226-$01,x
+                beq LBA2E_226
+                bpl LBA1A_226
+                bcs LBA27_226
+                inx
+                bcc LB9F7_226   ;always taken
+
+LBA27_226:
+                dex
+LBA28_226:
+                pla
+                jsr LB46F
+                clc
+                rts
+
+LBA2E_226:
+                sec
+                rts
+
+LBA30_226:
+                .text "SRAM"
+                .byte $ff,$ff
+                .text "SRLOAD"
+                .byte >(LB549-$01),<(LB549-$01)
+                .text "SRSAVE"
+                .byte >(LB54D-$01),<(LB54D-$01)
+                .text "SRWRITE"
+                .byte >(LB5DA-$01),<(LB5DA-$01)
+                .text "SRREAD"
+                .byte >(LB5DE-$01),<(LB5DE-$01)
+                .text "SRDATA"
+                .byte >(LB63E-$01),<(LB63E-$01)
+                .text "SRROM"
+                .byte >(LB688-$01),<(LB688-$01)
+                .byte 0
+
+                .else
+                
                 jsr LB46F       ;skip spaces in command line
                 tya             ;save offset of start of user word
                 pha
@@ -9632,7 +10617,8 @@ LB40E:
                 clv             ;else V=0, accept abbreviations AFTER this point
                 bvc LB3DC       ;check rest of words match (always)
                                 ;[BUG] BVC sensitive to glitches, use BEQ or BRA
-
+                .endif
+                
 ;Note: when this code reaches the last letter of a command word and it
 ;is lowercase, LB3DC accepts the command immediately, even if the user's
 ;word continues (in contrast to the MOS parser and DFS above, wname0).
@@ -9713,14 +10699,20 @@ LB465:
 
 LB469:                          ;Skip current character and spaces in command line
                 iny             ;increment command line offset
+                .if !dfs226
                 bne LB46F       ;if not overflowed then loop
                 jmp LB4AD       ;else raise "Bad command" error.
+                .endif
 
 LB46F:                          ;Skip spaces in command line
                 lda (linptr),y  ;get character of command line
                 cmp #$20        ;is it a space?
                 beq LB469       ;if so then advance and test next character
+                .if dfs226
+                cmp #13
+                .else
                 clc             ;else return C=0.
+                .endif
                 rts
 
 LB477:                          ;Test for end of command line
@@ -9771,15 +10763,19 @@ LB4B2:                          ;end of first argument reached
                 bvs LB4AD       ;if no argument present then "Bad command"
                 rts             ;else exit
 
+                .if !dfs226
 LB4B5:
                 iny             ;increment offset
                 beq LB4AD       ;if offset overflows then "Bad command"
                 rts             ;else return
+                .endif
 
 LB4B9:                          ;Parse bank specifier
                 stx L00BF       ;save X in temp
                 jsr LB46F       ;skip spaces in command line
+                .if !dfs226
                 lda (linptr),y  ;get bank specifier character
+                .endif
                 ldx #$03        ;4 ranges to test, 3..0:
 LB4C2:
                 cmp LB4FE,x     ;if beyond end of current range
@@ -9787,7 +10783,11 @@ LB4C2:
                 cmp LB4FA,x     ;else if before start of range
                 bcc LB4F3       ;then try next range
                 sbc LB502,x     ;else convert to bank number
+                .if dfs226
+                iny             ;increment offset
+                .else
                 jsr LB4B5       ;increment offset
+                .endif
                 cmp #$01        ;if bank number <> 1
                 bne LB4EA       ;then return A=bank number, C=0
                 lda (linptr),y  ;else it may be a two-digit argument
@@ -9796,8 +10796,13 @@ LB4C2:
                 cmp #$30        ;else if character < "0"
                 bcc LB4E8       ;then return A=1, C=0
                 sbc #$26        ;else C=1, convert second digit to 10..15
+                .if dfs226
+                iny             ;increment offset
+                bne LB4EA
+                .else
                 jsr LB4B5       ;increment offset
                 jmp LB4EA       ;return A=bank number, C=0
+                .endif
 
 LB4E8:
                 lda #$01        ;"1" with no more digits, return A=1:
@@ -9828,12 +10833,13 @@ LB4FA:
 LB4FE:
                 .char $3A,$47,$5B,$7B
 LB502:
-                .if BUGFIX
+                .if BUGFIX||dfs226
                 .char $30,$37,$47,$67
                 .else
                 .char $30,$37,$47,$6A
                 .endif
 
+                .if !dfs226
 LB506:                          ;Table of SRAM *commands
                 .text "sram"
                 .char $00,$00   ;command terminator, command number
@@ -9858,6 +10864,8 @@ LB53D:                          ;Table of SRAM *command addresses
                 .word LB5DE     ;*SRREAD                        $B5DE
                 .word LB63E     ;*SRDATA                        $B63E
                 .word LB688     ;*SRROM                         $B688
+
+                .endif
 
 LB549:                          ;*SRLOAD
                 lda #$C0        ;b7=1 load to SWRAM, b6=1 use pseudo-addressing
@@ -9927,12 +10935,18 @@ LB5A4:
                 sta (L00B8),y   ;update mode bits/RAM bitmap
                 ldy L00BA+$00   ;restore offset of end of last argument
                 jsr LB46F       ;skip spaces in command line
+                .if !dfs226
                 lda (linptr),y  ;get first character of next argument
+                .endif
                 and #$DF        ;convert to uppercase
                 ldx #$00        ;x=$00 do not use user memory for transfer
                 cmp #$51        ;if character = "Q"
                 bne LB5C5
+                .if dfs226
+                iny
+                .else
                 jsr LB4B5       ;then skip over it
+                .endif
                 .if SQUEEZE
                 dex             ;and flag fast transfer, X=$FF
                 .else
@@ -10207,18 +11221,35 @@ LB74D:                          ;Read from parasite to SWRAM
                 ldx #<L00BA     ;point XY to copy of transfer address
                 ldy #>L00BA
                 jsr tubadr      ;call TUBADR to set up data transfer
+                .if dfs226
+                ldy #$07        ;wait 23 microseconds
+                .else
                 ldy #$0B        ;wait 34 microseconds
+                .endif
                 jsr LB898
+                .if !dfs226
                 nop             ;wait 2 microseconds:
                 nop
+                .endif
 LB775:
                 lda reg3        ;read from R3DATA
                 sta (L00B8),y   ;store in I/O memory buffer
+                .if dfs226
+                ldx #$03        ;wait 13 microseconds
+                .else
                 ldx #$08        ;wait 26.5 microseconds
+                .endif
                 jsr LB89C
+                .if dfs226
+                nop             ;wait 1 microsecond
+                .endif
                 iny             ;increment buffer offset
+                .if dfs226
+                cpy L00BE+$00
+                .else
                 .char $CC       ;compare offset with LSB transfer size
                 .word L00BE+$00 ;CPY     L00BE; +0.5 us with absolute addressing
+                .endif
                 bne LB775       ;loop until done at 36 microseconds per byte
                 beq LB7B1
 
@@ -10237,15 +11268,25 @@ LB787:
                 ldx #<L00BA     ;point XY to Tube transfer address
                 ldy #>L00BA
                 jsr tubadr      ;call TUBADR to set up data transfer
+                .if dfs226
+                ldy #$05        ;wait 18 microseconds
+                .else
                 ldy #$08        ;wait 26.5 microseconds
+                .endif
                 jsr LB898
+                .if !dfs226
                 nop             ;wait 2 microseconds:
                 nop
+                .endif
 LB7A4:
                 lda reg3        ;read Tube FIFO 3
                 sta (L00B8),y   ;store in buffer (5 us so far)
+                .if dfs226
+                lda (L00B8),y   ;wait 3 microseconds
+                .else
                 jsr LB8AB       ;wait 6 microseconds
                 lda $00         ;wait 1.5 microseconds (LDA zp)
+                .endif
                 iny             ;increment and loop back
                 bne LB7A4       ;taking 15 microseconds per byte
 LB7B1:
@@ -10343,11 +11384,20 @@ LB7EB:
 LB81C:
                 lda (L00B8),y   ;get byte from buffer
                 sta reg3        ;store in Tube FIFO 3 (4.5 us so far)
+                .if dfs226
+                ldx #$03        ;wait 13 microseconds
+                .else
                 ldx #$08        ;wait 26.5 microseconds
+                .endif
                 jsr LB89C
+                .if !dfs226
                 nop             ;wait 1 microsecond
+                .endif
                 iny             ;increment offset
                 cpy L00BE+$00   ;test if end of buffer reached
+                .if dfs226
+                cpy L00BE+$00   ;[BUG] can't hurt to double check
+                .endif
                 bne LB81C       ;if not then loop (36 us per byte)
                 beq LB84B       ;else release Tube and loop for next page.
 
@@ -10364,10 +11414,16 @@ LB82E:
 LB83E:
                 lda (L00B8),y   ;get byte from buffer
                 sta reg3        ;store in Tube FIFO 3 (4.5 us so far)
+                .if dfs226
+                nop             
+                nop             
+                nop             ;wait 3 microseconds total
+                .else
                 ldx #$03        ;wait 8 microseconds
 LB845:
                 dex
                 bne LB845
+                .endif
                 iny             ;increment offset
                 bne LB83E       ;loop until 256 bytes sent (15 us per byte)
 LB84B:
