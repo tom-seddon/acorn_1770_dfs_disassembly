@@ -1,36 +1,4 @@
 ; automatically converted from: dfs224.asm.txt
-                .if dfs226
-                ; Bodge/hack region
-;close=$9b58
-;delete=$8782
-;build=$abc5
-;dump=$ab46
-;list_=$ab04
-;roms=$a9d0
-;type_=$aafd
-;pmhelp=$ffff
-;LAEA9_226=$aea9
-;zerchk=$ac18
-;iprdec=$ac4e
-;dump3=$ab54
-;build4=$abbc
-;hmtbut=$ac62
-;tu_main=$36
-;tu_newbr=$16
-;tu_org52=$af79
-;tu_tout=$af35
-;tu_xxxl1=$af37
-;tu_adrral=$ffff
-;LACAF=$ffff
-;LB82B_226=$b82b
-;LB850_226=$b850
-;LBAB9_226=$bab9
-;LBA30_226=$ba30
-;LB4B5=$ffff
-                
-                .endif
-
-
 ;Disassembly of Acorn DFS 2.24
 ;Greg Cook, 20 May 2024
 
@@ -445,6 +413,7 @@ oscli=$FFF7                     ;Execute command line
                 .dsection DOS11
                 .dsection TUBE
                 .dsection SRAM
+                .dsection BPLUS
                 .dsection FASTGB
                 
                 .else
@@ -476,7 +445,11 @@ lang:                           ;Language entry
                 .word $0000
 
                                 ;Service entry
+                .if dfs226
+                jmp LBEC8_226
+                .else
                 jmp LAB9F
+                .endif
 
                 .char $82       ;rom type: service only
                 .char copyr-lang ;copyright offset pointer
@@ -11534,6 +11507,159 @@ LB8D1:                          ;Reserve paged ROM slot Y for RAM
 
                 .endsection SRAM
 
+                .if dfs226
+
+;(There is a commented disassembly of this somewhere on mdfs.net - I'm
+;sure of it?? But I can't find it at time of writing.)
+                
+                .section BPLUS
+LBEC8_226:
+                cmp #1
+                bne LBEE0_226
+                pha
+                tya
+                pha
+                lda #$8f        ;OSBYTE $8F = issue service request
+                ldx #$2b        ;seemingly undocumented??
+                ldy romid       ;??
+                jsr osbyte
+                pla
+                tay
+                ldx romid
+                pla
+LBEDD_226:
+                jmp LAB9F       ;SRAM paged ROM service entry point
+
+LBEE0_226:
+                cmp #$2b
+                bne LBEDD_226
+                cpy romid
+                beq LBEEE_226
+
+LBEE8_226:
+                ldx romid
+                lda #0
+                beq LBEDD_226
+
+LBEEE_226:
+                lda #$72        ;OSBYTE $72 = select shadow memory
+                ldx #$00        ;force shadow memory
+                jsr osbyte
+                jsr osbyte      ;??
+                bvs LBEE8_226   ;??
+
+                lda #$ea
+                jsr LBF82_226   ;OSBYTE $EA = check for Tube presence
+                bne LBEE8_226   ;skip message if Tube active
+                lda #$d7        ;OSBYTE $D7 = read boot message/!BOOT flags
+                ldy #$7f        ;clear bit 7
+                jsr LBF84_226
+                bpl LBEE8_226   ;taken if it was already disabled
+                jsr osnewl
+                ldx #LBF4F_226-LBF4F_226 ;print "Acorn OS "
+                jsr LBF7C_226
+                lda #$fd        ;OSBYTE $FD = read last BREAK type
+                jsr LBF82_226
+                beq LBF46_226   ;skip memory count if soft BREAK
+                tsx
+                ldy #LBF8B_226_end-LBF8B_226
+LBF1C_226:
+                lda LBF8B_226-1,y
+                pha
+                dey
+                bne LBF1C_226
+                txa
+                tay
+                lda #1
+                pha
+                tsx
+                inx
+                txa
+                pha
+                ldx #$f
+                lda #$00
+                sta L00B0
+                rts
+
+LBF33_226:
+                tya
+                tax
+                txs
+                lda L00B0       ;bank count
+                asl a
+                asl a
+                clc
+                adc #LBF5C_226-LBF4F_226 ;[BUG] no range check??
+                tax
+                jsr LBF7C_226   ;print (num banks+4)*16
+                ldx #LBF59_226-LBF4F_226
+                jsr LBF7C_226   ;print "K" + beep
+LBF46_226:
+                jsr osnewl
+                jsr osnewl
+                jmp LBEE8_226
+
+LBF4F_226:
+                .text "Acorn OS ",0
+LBF59_226:
+                .text "K",7,0
+LBF5C_226:
+                .text "64",0,0
+                .text "80",0,0
+                .text "96",0,0
+                .text "112",0
+                .text "128",0
+                .text "144",0
+                .text "160",0
+
+LBF78_226:
+                jsr oswrch
+                inx
+LBF7C_226:
+                lda LBF4F_226,x
+                bne LBF78_226
+                rts
+
+LBF82_226:
+                ldy #$ff
+LBF84_226:
+                ldx #$00
+                jsr osbyte
+                txa
+                rts
+
+LBF8B_226:
+                lda romid
+                pha
+LBF8E_226:
+                stx romid
+                stx romsw
+                lda $bfff
+                pha
+                eor #$a5
+                sta $bfff       ;would ROM version not make more sense??
+                cmp $bfff
+                bne LBFA3_226
+                inc L00B0
+LBFA3_226:
+                pla
+                sta $bfff
+                dex
+                bmi LBFB2_226
+                cpx #$b
+                bne LBF8E_226
+                ldx #1
+                bne LBF8E_226   ;always taken
+LBFB2_226:
+                pla
+                sta romid
+                sta romsw
+                jmp LBF33_226
+LBF8B_226_end:
+                
+                .endsection BPLUS
+                .endif
+
                 .section FASTGB
                 
                 .if FASTGB
@@ -11772,6 +11898,11 @@ cmdtbl:
 *=$BFFF
                 .char $00
                 .else
+
+                .if dfs226
+; Padding
+                .fill $c000-*,$ff
+                .else
 ;Padding
                 .dint -1,-1,-1,-1,-1,-1,-1,-1
                 .dint -1,-1,-1,-1,-1,-1,-1,-1
@@ -11832,6 +11963,7 @@ cmdtbl:
                 .dint -1,-1,-1,-1,-1,-1,-1,-1
                 .dint -1,-1
                 .char -1
+                .endif
                 .endif
 
 end:
