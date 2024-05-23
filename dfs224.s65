@@ -55,16 +55,20 @@ dfs226=false
 
                 .if dfs226
                 ; Bodge/hack region
-close=$ffff
-delete=$ffff
-build=$ffff
-dump=$ffff
-list_=$ffff
-roms=$ffff
-type_=$ffff
+;close=$9b58
+;delete=$8782
+;build=$abc5
+;dump=$ab46
+;list_=$ab04
+;roms=$a9d0
+;type_=$aafd
 pmhelp=$ffff
 LAEA9_226=$aea9
-L9ADE_226=$9ade
+;zerchk=$ac18
+;iprdec=$ac4e
+;dump3=$ab54
+;build4=$abbc
+;hmtbut=$ac62
                 .endif
                 
 ;Bugs fixed by _BUGFIX:
@@ -126,6 +130,10 @@ utemp=$00AA                     ;$00=Source disc in drive $80=Destination disc i
                                 ;=0 listing current directory during *CAT >0 listing other dirs
                                 ;File attribute mask in *ACCESS $00=unlocked $80=locked
 ltemp=$00AB                     ;Offset of catalogue entry of found file in *CAT, *WIPE, *COPY
+.if dfs226
+bldtbl=$00AC                    ;used by *DUMP
+L00AD=$00AD                     ;see, e.g., LAAF1_226
+.endif
 ptemp=$00AE                     ;Pointer to dialogue or error message source string
 temp=$00B0                      ;Pointer to private page, extended vector table, OSFILE or
                                 ;OSWORD $7F control block or local copy of sector ID table
@@ -369,7 +377,9 @@ osargs=$FFDA                    ;Read/write file arguments
 osfile=$FFDD                    ;Read/write whole file
 osrdch=$FFE0                    ;Read char from kbd
 osasci=$FFE3                    ;OSWRCH + CR]CRLF
+osnewl=$FFE7                    ;Write LF+CR to screen
 oswrch=$FFEE                    ;Write char to screen
+osword=$FFF1                    ;Misc OS calls
 osbyte=$FFF4                    ;Misc OS calls
 oscli=$FFF7                     ;Execute command line
 
@@ -395,7 +405,11 @@ oscli=$FFF7                     ;Execute command line
                 .dsection DOS08
                 .dsection DOS09
                 .dsection DOS10
-                .dsection DOS_rest
+                .dsection DOS10_1
+                .dsection DOS10_2
+                .dsection DOS11
+                .dsection SRAM
+                .dsection FASTGB
                 
                 .else
 
@@ -412,7 +426,10 @@ oscli=$FFF7                     ;Execute command line
                 .dsection DOS08
                 .dsection DOS09
                 .dsection DOS10
-                .dsection DOS_rest
+                .dsection DOS10_1
+                .dsection DOS11
+                .dsection SRAM
+                .dsection FASTGB
 
                 .endif
 
@@ -532,9 +549,13 @@ pchr:                           ;Print character in A (OSASCI)
                 jsr osasci      ;call OSASCI
                 jmp wriwdx      ;call OSBYTE $03 = specify output stream
 
-                .if SQUEEZE
+                .if SQUEEZE&&!dfs226
                 .else
+.if dfs226
+L80B8_226:
+.else
                                 ;unreachable code
+.endif
                 jsr L8426       ;[D]
                 .endif
 bytout:                         ;Print hex byte
@@ -1197,10 +1218,14 @@ L8430:
 L8436:
                 rts
 
-                .if SQUEEZE
+                .if SQUEEZE&&!dfs226
+                .else
+                .if dfs226
+dump_filter:
                 .else
                                 ;unreachable code
                                 ;was *DUMP character filtering
+                .endif
                 and #$7F
                 cmp #$7F
                 beq L8441
@@ -1582,7 +1607,7 @@ initbl:                         ;Utility command table
                 .if dfs226
                 .text "ROMS"
                 .char >(roms-$01),<(roms-$01)
-                .char $01
+                .char $0c
                 .endif
                 .if dfs226
                 .text "TYPE"
@@ -1692,10 +1717,14 @@ qdel4:
                 bcs qdel0       ;if found then wipe the file
                 rts             ;else exit
 
-                .if SQUEEZE
+                .if SQUEEZE&&!dfs226
                 .else
+.if dfs226
+delete:
+.else
                                 ;unreachable code
                                 ;was *DELETE
+.endif
                 jsr clrwld      ;disallow wildcard characters in filename
                 jsr chksyn      ;call GSINIT with C=0 and require argument
                 jsr getlok      ;ensure file matching spec in catalogue
@@ -4081,9 +4110,14 @@ wfdie:                          ;FSC  6 = new filing system starting up
                 jmp relmem      ;[D]vacate absolute workspace
                 .endif
 
-                .if SQUEEZE
+                .if SQUEEZE&&!dfs226
                 .else
+
+.if dfs226
+close:
+.else
                                 ;unreachable code
+.endif
                 lda #$20
                 sta dufflg
                 .endif
@@ -7051,7 +7085,7 @@ LA5D1:                          ;Set high word of OSFILE load address = $FFFF
 
                 .endsection DOS10
 
-                .section DOS_rest
+                .section DOS10_1
                 
 verify:                         ;*VERIFY
                 lda #$00        ;clear formatting flag
@@ -7653,6 +7687,361 @@ LA9E9:                          ;Print hex nibble (via OSASCI)
                 jsr digut1      ;convert hex nibble to ASCII
                 jmp osasci      ;print via OSASCI and exit
 
+                .endsection DOS10_1
+
+                .if dfs226
+                .section DOS10_2
+roms:
+                lda #0
+                sta linno
+                jsr LAAEA_226
+                lda #$f
+                sta utemp
+                jsr LAADD_226
+                sec
+                jsr gsinit
+                ldy ltemp
+                clc
+                beq LA9FF_226
+
+LA9E7_226:
+                jsr L8461
+                bcs LA9FF_226
+                sty ltemp
+                and #$0f
+                sta utemp
+                jsr LAA53_226
+                ldy ltemp
+                jsr setupr
+                sty ltemp
+                bne LA9E7_226
+                rts
+
+LA9FF_226:
+                ror linno
+LAA01_226:
+                bit linno
+                bpl LAA0A_226
+                jsr LAA12_226
+                bcc LAA0D_226
+LAA0A_226:
+                jsr LAA53_226
+LAA0D_226:
+                dec utemp
+                bpl LAA01_226
+                rts
+
+LAA12_226:
+                lda #$09
+                sta romptr+0
+                lda #$80
+                sta romptr+1
+                ldy ltemp
+LAA1C_226:
+                lda (linptr),y
+                cmp #13
+                beq LAA44_226
+                cmp #'"'
+                beq LAA44_226
+                iny
+                cmp #'*'
+                beq LAA51_226
+                jsr setcap
+                sta ptemp
+                jsr LAACF_226
+                beq LAA42_226
+                ldx ptemp
+                cpx #'#'
+                beq LAA1C_226
+                jsr setcap
+                cmp ptemp
+                beq LAA1C_226
+LAA42_226:
+                clc
+                rts
+
+LAA44_226:
+                jsr LAACF_226
+                beq LAA51_226
+                cmp #' '
+                beq LAA44_226
+                cmp #13
+                bne LAA42_226
+LAA51_226:
+                sec
+                rts
+
+LAA53_226:
+                ldy utemp
+                lda (atemp),y
+                beq LAA42_226
+                pha
+                jsr vstrng
+                .text "Rom "
+                tya
+                jsr L80B8_226
+                jsr vstrng
+                .text " : "
+                lda #"("
+                jsr pchr
+                pla
+                pha
+                bmi LAA78_226
+                ldy #$20
+                bne LAA7A_226
+LAA78_226:
+                ldy #'S'
+LAA7A_226:
+                tya
+                jsr pchr
+                pla
+                ldy #' '
+                asl a
+                bpl LAA86_226
+                ldy #'L'
+LAA86_226:
+                tya
+                jsr pchr
+                lda #')'
+                jsr pchr
+                jsr pspace
+                jsr LAA9A_226
+                jsr pcrlf
+                sec
+                rts
+
+LAA9A_226:
+                lda #$07
+                sta romptr+0
+                lda #$80
+                sta romptr+1
+                jsr LAACF_226
+                sta ptemp
+                inc romptr+1
+                ldy #$1e        ;????
+                jsr LAAC2_226
+                bcs LAAB7_226
+                jsr pspace
+                dey
+                jsr LAAC2_226
+LAAB7_226:
+                rts
+
+LAAB8_226:
+                cmp #$20
+                bcs LAABE_226
+                lda #$20
+LAABE_226:
+                jsr pchr
+                rts
+
+LAAC2_226:
+                lda romptr+0
+                cmp ptemp
+                bcs LAACE_226
+                jsr LAACF_226
+                bne LAAB8_226
+                clc
+LAACE_226:
+                rts
+
+LAACF_226:
+                tya
+                pha
+                ldy utemp
+                jsr osrdsc
+                inc romptr+0
+                tax
+                pla
+                tay
+                txa
+                rts
+
+LAADD_226:
+                jsr savit
+                lda #$aa        ;OSBYTE $AA = read address of ROM info table
+                jsr readby
+                stx atemp+0
+                sty atemp+1     ;sneaks into ytemp
+                rts
+
+LAAEA_226:
+                tsx
+                lda #0
+                sta stack+$07,x
+                rts
+
+pribld:
+                ldx romid
+                lda priptr,x
+                and #$3f
+                sta L00AD
+                inc L00AD
+                rts
+
+type_:
+                jsr zerchk
+                lda #0
+                beq type0
+
+list_:
+                jsr zerchk
+                lda #$ff
+type0:
+                sta ltemp       ;store in linno flag
+                lda #$40        ;get for reading
+                jsr osfind      ;get file
+                tay
+                lda #13         ;start with a linno
+                cpy #0          ;did the file exist?
+                bne type3
+type8:
+                jmp nofil
+type1:
+                jsr osbyte
+                bcs type2       ;eof??
+                cmp #10         ;ignore LFs
+                beq type1
+                plp
+                bne type_
+                pha
+                jsr iprdec
+                jsr pspace
+                pla
+type4:
+                jsr osasci
+                bit escflg
+                bmi dump3
+type3:
+                and ltemp
+                cmp #13
+                php             ;Save linno flag
+                jmp type1
+
+type2:
+                plp             ;Remove from stack
+                jsr osnewl
+type9:
+                lda #0          ;EOF close down
+                jmp osfind
+
+dump:
+                jsr zerchk
+                lda #$40
+                jsr osfind
+                tay
+                beq type8
+
+                jsr pribld      ;Put the private pointer+1 into bldtbl+$01
+
+dump3:
+                bit escflg
+                bmi build4
+                lda linno+1
+                jsr hmtbut
+                lda linno
+                jsr hmtbut
+                jsr pspace
+                lda #8          ;store in bytes 1-8 of private workspace
+                sta bldtbl+0
+                ldx #0
+dump2:
+                jsr osbget
+                bcs dump4
+                sta (bldtbl,x)
+                jsr hmtbut
+                jsr pspace
+                dec bldtbl+0
+                bne dump2
+                clc
+dump4:
+                php
+                bcc dumpb
+dumpc:
+                lda #'*'
+                jsr osasci
+                jsr osasci
+                jsr pspace
+
+                lda #0
+                sta (bldtbl,x)
+                dec bldtbl+0
+                bne dumpc
+dumpb:
+                jsr dumpb2
+                jsr osnewl
+                lda #8
+                clc
+                adc linno+0
+                sta linno+0
+                bcc LABA4_226
+                inc linno+1
+LABA4_226:
+                plp
+                bcs type9
+                bcc dump3
+
+dumpb2:
+                lda #8
+                sta bldtbl+0
+dump6:
+                ldx #0
+                lda (bldtbl,x)
+                jsr dump_filter
+                jsr osasci
+                dec bldtbl+0
+                bne dump6
+                rts
+
+build4:
+                jsr ackesc
+                jsr type9
+                jmp escape
+
+build:
+                jsr zerchk
+                lda #$80
+                jsr osfind
+                sta ltemp
+build1:
+                jsr iprdec
+                jsr pspace
+                jsr pribld      ;Put private pointer+1 into BLDTBL+$01
+
+                ldx #bldtbl
+                ldy #$ff
+                sty bldtbl+2
+                sty bldtbl+4
+                iny             ;Y=0
+                sty bldtbl+0
+                lda #' '        ;min acceptable value
+                sta bldtbl+3
+                tya
+                jsr osword
+                php
+                sty utemp
+                ldy ltemp
+                ldx #$00
+                beq build3      ;Always
+build2:
+                lda (bldtbl,x)
+                jsr osbput
+                inc bldtbl+0
+build3:
+                lda bldtbl+0
+                cmp utemp
+                bne build2
+                plp
+                bcs build4
+                lda #13
+                jsr osbput
+                jmp build1
+                
+                .endsection DOS10_2
+                .endif
+
+                .section DOS11
+
 pdspc:                          ;Print two spaces
                 jsr pspace      ;print a space:
 pspace:                         ;Print a space
@@ -7662,6 +8051,73 @@ pspace:                         ;Print a space
                 pla             ;restore A
                 clc             ;exit C=0
                 rts
+
+                .if dfs226
+zerchk:
+                tsx
+                lda #0
+                sta stack+$07,x
+                jsr LAC47_226
+                cmp #13
+                bne LAC28_226
+                jmp synerr
+LAC28_226:
+                lda #0
+                sta linno+0
+                sta linno+1
+                pha
+                tya
+                clc
+                adc linptr+0
+                tax
+                lda linptr+1
+                adc #0
+                tay
+                pla
+                rts
+
+LAC3B_226:                      ;unused?
+                tya
+                clc
+                adc linptr+0
+                sta linptr+0
+                bcc LAC45_226
+                inc linptr+0    ;uhh...are you sure?
+LAC45_226:
+                rts
+
+LAC46_226:
+                iny
+LAC47_226:
+                lda (linptr),y
+                cmp #' '
+                beq LAC46_226
+                rts
+
+iprdec:
+                sed
+                clc
+                lda linno+0
+                adc #$01
+                sta linno+0
+                lda linno+1
+                adc #$00
+                sta linno+1
+                cld
+                jsr hmtbut
+                lda linno+0
+hmtbut:                         ;dup of routine at LA9DE
+                pha
+                jsr sfour
+                jsr LAC6A_226
+                pla
+LAC6A_226:
+                jsr digut1
+                jsr osasci
+                sec
+                rts
+
+                .endif
 
 LA9FB:                          ;Z-BREAK
                 jsr savita      ;save AXY
@@ -7721,8 +8177,9 @@ LAA50:                          ;OSBYTE $00 = display MOS version
                 ldx #$01        ;return X=$01, MOS 1.20
                 plp             ;restore interrupt flag state and exit
                 rts             ;[BUG]doesn't print version even if X=0 on entry
+                .endsection DOS11
 
-
+                .section SRAM
 ;Start of SRAM 1.04
 
 LAA64:                          ;Text of *HELP SRAM
@@ -10019,6 +10476,10 @@ LB8D1:                          ;Reserve paged ROM slot Y for RAM
                 tya             ;push on stack for LB8BA
                 bpl LB8BA       ;slot number in A, branch (always)
 
+                .endsection SRAM
+
+                .section FASTGB
+                
                 .if FASTGB
                 jmp LAE35       ;raise "Illegal address" error
 
@@ -10240,7 +10701,7 @@ cmdtbl:
 
                 .endif
 
-                .endsection DOS_rest
+                .endsection FASTGB
 
                 .if BUGFIX
 *=$BFFF
