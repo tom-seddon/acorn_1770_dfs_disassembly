@@ -1,18 +1,4 @@
 ; automatically converted from: dfs224.asm.txt
-; Bodge region
-                .if dfs225
-L8F70_225=$8f70
-L99CF_225=$99cf
-L9B5D_225=$9b5d
-L9973_225=$9973
-L9B1F_225=$9b1f
-L9ADC_225=$9adc
-;shut=$9f30
-;LBA30_226=$b4f5
-;LB2F9_225=$b2f9
-LB315_225=$b315
-                .endif
-                
 ;Disassembly of Acorn DFS 2.24
 ;Greg Cook, 20 May 2024
 
@@ -557,13 +543,11 @@ estrn0:
                 sta errbuf,x    ;store character at end of error message
                 bmi vstrnr      ;if b7=1 then opcode terminator, execute it
                 bne estrn0      ;else if not NUL then copy more characters
+                jsr reltub      ;else raise error. ensure Tube is released
                 .if dfs225
-                jsr L8F70_225
                 bit LC2A0+2
                 bmi L807C_225
                 jsr L9840_225
-                .else
-                jsr reltub      ;else raise error. ensure Tube is released
                 .endif
                 .if dfs225
 L807C_225:
@@ -4654,7 +4638,7 @@ vradr:                          ;OSARGS A=0/2, Y>0 return PTR/EXT
 L97A9:                          ;OSARGS A=3, Y>0 set EXT
                 jsr dcrych      ;ensure file handle valid and open
                 .if dfs225
-                jsr L99CF_225
+                jsr vbput1
                 jsr scmp
                 bcc L982D_225
                 phy
@@ -4662,7 +4646,7 @@ L97A9:                          ;OSARGS A=3, Y>0 set EXT
                 dey
                 dey
                 dey
-                jsr L9B5D_225
+                jsr scmp
                 ply
                 bcc L9816_225
                 lda 0,x
@@ -4679,8 +4663,8 @@ L9816_225:
                 lda 2,x
                 sta seqlha,y
                 lda #$20
-                jsr L9973_225
-                jmp L9B1F_225
+                jsr setbit
+                jmp vstarc
 
 L982D_225:
                 phx
@@ -4694,7 +4678,7 @@ L9831_225:
                 bne L9831_225
                 ply
                 plx
-                jsr L9ADC_225
+                jsr vstara
 L9840_225:
                 ldy dcby
                 phy
@@ -4706,7 +4690,7 @@ L9846_225:
                 inx
                 bpl L9846_225
                 ply
-                jsr L9B1F_225
+                jsr vstarc
                 stx LC2A0+2
                 rts
                 
@@ -9364,7 +9348,7 @@ LAD0B:
                 jsr LB2F9_225
                 pha
                 ldy #$ef
-                jsr LB315_225
+                jsr LB20D
                 lda (L00BA)
                 cmp #$2D
                 bne LAE0C_225
