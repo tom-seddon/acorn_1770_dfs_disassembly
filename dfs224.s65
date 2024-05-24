@@ -6581,7 +6581,11 @@ fscltb:
                 .if !dfs226
                 .char <(ex    -$01) ;FSC  9 = *EX                   $8238
                 .char <(info  -$01) ;FSC 10 = *INFO                 $8257
+                .if dfs225
+                .char <(nobin -$01) ;FSC 11 = *RUN from library     $8832
+                .else
                 .char <(wnota -$01) ;FSC 11 = *RUN from library     $8832
+                .endif
                 .endif
 
 ;Table of action addresses for FSC calls 0..11, high bytes
@@ -6598,7 +6602,11 @@ fschtb:
                 .if !dfs226
                 .char >(ex    -$01)
                 .char >(info  -$01)
+                .if dfs225
+                .char >(nobin -$01)
+                .else
                 .char >(wnota -$01)
+                .endif
                 .endif
 
 ;Table of action addresses for OSFILE calls $FF,0..7, low bytes
@@ -11488,7 +11496,7 @@ LB775:
                 ldx #$08        ;wait 26.5 microseconds
                 .endif
                 jsr LB89C
-                .if dfs226
+                .if dfs226||dfs225
                 nop             ;wait 1 microsecond
                 .endif
                 iny             ;increment buffer offset
@@ -11516,7 +11524,7 @@ LB787:
                 ldx #<L00BA     ;point XY to Tube transfer address
                 ldy #>L00BA
                 jsr tubadr      ;call TUBADR to set up data transfer
-                .if dfs226
+                .if dfs226||dfs225
                 ldy #$05        ;wait 18 microseconds
                 .else
                 ldy #$08        ;wait 26.5 microseconds
