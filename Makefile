@@ -28,7 +28,8 @@ build: _folders
 	$(_V)$(TASS) $(TASSARGS) "dfs224.s65" -o "$(BUILD)/dfs224.bin" "-L$(BUILD)/dfs224.lst"
 	$(_V)$(TASS) $(TASSARGS) "dfs224.s65" -Ddfs225=true -o "$(BUILD)/dfs225.bin" "-L$(BUILD)/dfs225.lst"
 	$(_V)$(TASS) $(TASSARGS) "dfs224.s65" -Ddfs226=true -o "$(BUILD)/dfs226.bin" "-L$(BUILD)/dfs226.lst"
-	$(_V)$(PYTHON) "bin/romdiffs.py" -a "$(BUILD)" -b "orig" "dfs224.bin" "dfs225.bin" "dfs226.bin"
+	$(_V)$(TASS) $(TASSARGS) "dfs224.s65" -Ddfs229=true -o "$(BUILD)/dfs229.bin" "-L$(BUILD)/dfs229.lst"
+	$(_V)$(PYTHON) "bin/romdiffs.py" -a "$(BUILD)" -b "orig" "dfs224.bin" "dfs225.bin" "dfs226.bin" "dfs229.bin"
 
 ##########################################################################
 ##########################################################################

@@ -1,4 +1,16 @@
 ; automatically converted from: dfs224.asm.txt
+
+                .if dfs229
+; Bodge region
+
+LA351_229=$a351
+setda=$ffff
+vstar=$ffff
+vstara=$ffff
+LA458_229=$a458
+                
+                .endif
+                
 ;Disassembly of Acorn DFS 2.24
 ;Greg Cook, 20 May 2024
 
@@ -52,6 +64,7 @@ SQUEEZE=false                   ;Unreachable code removed and some routines shor
                 .weak
 dfs225=false
 dfs226=false
+dfs229=false
                 .endweak
 
 ;Bugs fixed by _BUGFIX:
@@ -168,26 +181,44 @@ L00BF=$00BF                     ;temporary; byte written to SWRAM, error message
 strtlo=work  +$0006             ;LSB start address in OSFILE 0
 lenlo=work  +$0006              ;LSB file length in OSFILE
 freehi=work  +$0006             ;MSB free space in *FREE / *MAP
+                .if dfs229
+L00C0=work +$0006
+                .endif
 strthi=work  +$0007             ;3MSB start address in OSFILE 0
 lenhi=work  +$0007              ;2MSB file length in OSFILE
 headlo=work  +$0007             ;LSB headroom in *FREE / *MAP
 bitcnt=work  +$0007             ;bit counter in LA960
+                .if dfs229
+L00C1=work +$0007
+                .endif
 endlo=work  +$0008              ;LSB end address in OSFILE 0
 lbahi=work  +$0008              ;MSB LBA in OSFILE
 headhi=work  +$0008             ;MSB headroom in *FREE / *MAP
+                .if dfs229
+L00C2=work +$0008
+                .endif
 endhi=work  +$0009              ;3MSB end address in OSFILE 0
 lbalo=work  +$0009              ;LSB LBA in OSFILE
+                .if dfs229
+L00C3=work +$0009
+                .endif
 lenhl=work  +$000A              ;MSB file length in OSFILE
 L00C4=work  +$000A              ;temp cat offset in *RENAME
                                 ;REUSED $0B=current FSC call is FSC 11 (_BUGFIX)
 todolo=work  +$000A             ;LSB no. sectors remaining to be copied
 todohi=work  +$000B             ;MSB no. sectors remaining to be copied
 wrknam=work  +$000B             ;current filename
+                .if dfs229
+L00C5=work  +$000b
+                .endif
 srclo=work  +$000C              ;LSB LBA of next sector to copy from source
 L00C6=work  +$000C              ;microcode in *FREE / *MAP
 srchi=work  +$000D              ;MSB LBA of next sector to copy from source
 userpt=work  +$000D             ;pointer to user's OSWORD control block
 dstlo=work  +$000E              ;LSB LBA of next sector to copy to destination
+                .if dfs229
+L00C8=work  +$000E
+                .endif
 dsthi=work  +$000F              ;MSB LBA of next sector to copy to destination
 L00C9=work  +$000F              ;microcode in *FORM / *VERIFY
 cpycat=work  +$0010             ;catalogue pointer in *COPY
@@ -272,7 +303,7 @@ LC29D=mainws+$009D              ;retry counter in *FORM / *VERIFY
 LC29E=mainws+$009E              ;retry counter in OSWORD $7F
 LC29F=mainws+$009F              ;number of tracks to *FORMAT / *VERIFY
 
-                .if dfs225
+                .if dfs225||dfs229
 LC2A0=mainws+$00A0
                 .endif
 
@@ -332,6 +363,9 @@ seqlma=seqmap+$0015             ;2MSB of open file's extent
 seqlha=seqmap+$0016             ;MSB of open file's extent
 seqflg=seqmap+$0017             ;channel flags b7=buffer contains PTR b6=buffer changed
                                 ;b5=EXT changed b4=EOF warning given b1..b0=drive number
+                .if dfs229
+LC318=seqmap+$0018
+                .endif
 seqem=seqmap+$0019              ;LSB of number of sectors allocated to file
 seqeh=seqmap+$001A              ;MSB of number of sectors allocated to file
 seqbit=seqmap+$001B             ;channel open bit mask corresponding to open file
@@ -440,6 +474,26 @@ oscli=$FFF7                     ;Execute command line
                 .dsection DOS11
                 .dsection SRAM
                 .dsection FASTGB
+
+                .elsif dfs229
+
+                .dsection DOS01
+                .dsection DOS01_1
+                .dsection DOS02
+                .dsection DOS02_1
+                .dsection DOS03
+                .dsection DOS03_1
+                .dsection DOS04
+                .dsection DOS05
+                .dsection DOS07
+                .dsection DOS06
+                .dsection DOS08
+                .dsection DOS09
+                .dsection DOS10
+                .dsection DOS10_1
+                .dsection DOS11
+                .dsection SRAM
+                .dsection FASTGB
                 
                 .else
 
@@ -482,6 +536,8 @@ lang:                           ;Language entry
                 .char $7b       ;version No.
                 .elsif dfs225
                 .char $7a       ;version No.
+                .elsif dfs229
+                .char $7e       ;version No.
                 .else
                 .char $79       ;version No.
                 .endif
@@ -490,6 +546,8 @@ lang:                           ;Language entry
                 .text "2.26"    ;version string
                 .elsif dfs225
                 .text "2.25"    ;version string
+                .elsif dfs229
+                .text "2.29"    ;version string
                 .else
                 .text "2.24"    ;version string
                 .endif
@@ -544,12 +602,10 @@ estrn0:
                 bmi vstrnr      ;if b7=1 then opcode terminator, execute it
                 bne estrn0      ;else if not NUL then copy more characters
                 jsr reltub      ;else raise error. ensure Tube is released
-                .if dfs225
+                .if dfs225||dfs229
                 bit LC2A0+2
                 bmi L807C_225
                 jsr L9840_225
-                .endif
-                .if dfs225
 L807C_225:
                 .endif
                 jmp errbuf      ;jump to BRK to raise error
@@ -562,20 +618,32 @@ vstrng:                         ;Print string immediate (via PCHR)
                 sta ptemp+$01
                 lda itemp       ;restore A on entry and save on stack
                 pha
+                .if !dfs229
                 tya             ;save Y
                 pha
                 ldy #$00        ;set Y=0 for indirect indexed load
+                .endif
 vstrlp:
                 jsr tmpinc      ;increment ptemp
+                .if dfs229
+                lda (ptemp)     ;get character from after JSR
+                .else
                 lda (ptemp),y   ;get character from after JSR
+                .endif
                 bmi vstrnx      ;if b7=1 then opcode terminator, execute it
                 jsr pchr        ;else print character
+                .if dfs229
+                bra vstrlp
+                .else
                 jmp vstrlp      ;and loop
+                .endif
 
 vstrnx:
                 pla             ;restore AY
+                .if !dfs229
                 tay
                 pla
+                .endif
 vstrnr:
                 clc             ;jump to address of end of string with C=0
                 jmp (ptemp)
@@ -593,8 +661,12 @@ pchr:                           ;Print character in A (OSASCI)
                 pha
                 ora #$10        ;b4=1 disable *SPOOL output
                 jsr wriwde      ;call OSBYTE $03 = specify output stream in A
+                .if dfs229
+                plx
+                .else
                 pla             ;restore previous output stream setting
                 tax
+                .endif
                 pla             ;restore character
                 jsr osasci      ;call OSASCI
                 jmp wriwdx      ;call OSBYTE $03 = specify output stream
@@ -771,10 +843,14 @@ isoexe:                         ;Extract b7,b6 of A
                 lsr a
                 lsr a
 isolen:                         ;Extract b5,b4 of A
+                .if dfs229
+                jsr sfour
+                .else
                 lsr a
                 lsr a
                 lsr a
                 lsr a
+                .endif
                 and #$03
                 rts
 
@@ -933,8 +1009,12 @@ lookux:
                 pla
 L8296:
                 tax             ;set X = offset of comparand
+                .if dfs229
+                stz vtemp+$00
+                .else
                 lda #(<catlow)-$08 ;start at first catalogue entry
                 sta vtemp+$00
+                .endif
 next0:
                 ldy #$00        ;y=0 point to start of leafname
                 lda #>catlow    ;[D]set MSB of pointer to first catalogue page
@@ -1206,10 +1286,15 @@ savit:                          ;Save XY
                 .else
 savita:                         ;Save AXY
                 pha             ;stack = Rl,Rh,y,x,a,cl,ch,sl,sh
+                .if dfs229
+                phx
+                phy
+                .else
                 txa             ;cl,ch=caller return address
                 pha             ;sl,sh=superroutine return address
                 tya
                 pha
+                .endif
                 lda #>(savrta-$01)
                 pha
                 lda #<(savrta-$01)
@@ -1232,19 +1317,29 @@ savit2:
                 pla             ;discard y,x:
                 pla
 savrta:                         ;Restore AXY and return to superroutine
+                .if dfs229
+                ply
+                plx
+                .else
                 pla
                 tay
                 pla
                 tax
+                .endif
                 pla
                 rts
 
 savit:                          ;Save XY
                 pha             ;push y,x,a
+                .if dfs229
+                phx
+                phy
+                .else
                 txa
                 pha
                 tya
                 pha
+                .endif
                 jsr savit0      ;restack then "call" rest of caller's routine!
                 tsx             ;get stack pointer
                 sta stack+$03,x ;store A on exit from caller in stack:
@@ -1324,9 +1419,14 @@ L8461:                          ;Input number up to 3 digits
                 sec
                 beq L848D       ;if no argument then exit Z=1, C=1
                 php
+                .if dfs229
+                stz etemp       ;else set total = 0
+                bra L8482       ;and branch into loop
+                .else
                 lda #$00        ;else set total = 0
                 sta etemp
                 beq L8482       ;and branch into loop (always)
+                .endif
 
 L846E:
                 jsr L8444       ;convert ASCII digit to binary and validate
@@ -1915,6 +2015,10 @@ blkwr:                          ;Write ordinary file L5
 L8826:
                 sta LC290+$06   ;store command in high OSWORD $7F control block:
 blkxx:                          ;Transfer ordinary file L5
+                .if dfs229
+                stz xtemp
+blkxx2:
+                .endif
                 jsr atot        ;prepare ordinary file transfer
                 jsr L93F9       ;transfer data and report errors L4
                 lda #$01        ;return A=1, file found
@@ -1922,7 +2026,7 @@ blkxx:                          ;Transfer ordinary file L5
                                 ;but these calls define no return value)
                 rts
 
-                .if dfs225
+                .if dfs225||dfs229
 
 wnota:
                 jsr stxylp      ;set GSINIT pointer to XY, set Y=0
@@ -1964,7 +2068,7 @@ defcon:
                 jsr frmnam      ;set current file from argument pointer
                 sty linadr+$00  ;store offset of command line tail
                 jsr L8271       ;search for file in catalogue
-                .if dfs225
+                .if dfs225||dfs229
                 bcs L888F_225
                 .else
                 bcs defsuc      ;if found then execute command binary
@@ -1976,7 +2080,7 @@ defcon:
                 jsr dodriv      ;select drive in A
                 jsr frmnm1      ;parse file spec from argument pointer
                 jsr L8271       ;search for file in catalogue
-                .if dfs225
+                .if dfs225||dfs229
                 bcs L888F_225
                 .else
                 bcs defsuc      ;if found then execute it
@@ -1996,7 +2100,7 @@ defcon:
                 bcc L8867       ;carry out to MSB
                 iny
 L8867:
-                .if dfs225
+                .if dfs225||dfs229
                 clc
 L888F_225:
                 rts
@@ -2516,14 +2620,21 @@ ren5:
                 .section DOS02_1
                 
 L8BBC:                          ;Internal OSWORD $7F handler
+                .if dfs229
+                lda #1
+                sta xtemp
+                .else
                 clc             ;c=0 interrupts not enabled
                 bcc L8BC1       ;branch into routine (always)
+                .endif
 
 L8BBF:                          ;Internal OSWORD $7F handler w/interrupts
                 cli             ;enable IRQ handling
+                .if !dfs229
                 sec             ;set carry flag to indicate this
 L8BC1:
                 ror xtemp       ;save interrupt flag state in xtemp
+                .endif
                 stx temp+$00    ;set up pointer to caller's control block
                 sty temp+$01
                 cld             ;clear decimal mode
@@ -2543,7 +2654,7 @@ L8BD8:
                 lda L00A2       ;get final controller status
                 jsr L8C0D       ;convert WD 1770 status to i8271 result
                 sta (temp),y    ;store in caller's control block
-                .if dfs226||dfs225
+                .if dfs226||dfs225||dfs229
                 ldx L00A7
                 cpx #$80
                 bne L8C2E_226
@@ -2553,7 +2664,7 @@ L8BD8:
 L8C2E_226:
                 .endif
                 pha             ;save status for return
-                .if dfs226||dfs225
+                .if dfs226||dfs225||dfs229
                 and #$df
                 .endif
                 cmp #$18        ;$18 = sector not found
@@ -2592,8 +2703,12 @@ L8C18:
 L8C1C:                          ;Prepare for OSWORD $7F operation
                 jsr L8F04       ;claim NMI
                 jsr L8F37       ;set track stepping speed from CMOS RAM
+                .if dfs229
+                stz L00A1       ;clear read/write flag
+                .else
                 lda #$00
                 sta L00A1       ;clear read/write flag
+                .endif
                 ldy #$09        ;copy bytes 9..11 of control block to zp
 L8C28:
                 lda (temp),y
@@ -2642,8 +2757,12 @@ L8C65:
 L8C69:
                 ror L00A1       ;set b7=Tube flag, b6=write flag
                 jsr L8F48       ;install NMI service routine
+                .if dfs229
+                lda (temp)     ;get drive number to operate on
+                .else
                 ldy #$00        ;$00 = offset of drive parameter
                 lda (temp),y    ;get drive number to operate on
+                .endif
                 bmi L8C78       ;if b7=1 reuse current drive then skip
                 and #$0F        ;else mask drive number and option bits
                 sta fdrive      ;set current drive
@@ -2702,8 +2821,12 @@ L8C8D:
                 bcs L8C9E       ;drive 0/2
                 ldx LC288+$01   ;or drive 1/3
 L8C9E:
+                .if dfs229
+                stz L00A2       ;clear result code/NMI busy flag
+                .else
                 ldy #$00
                 sty L00A2       ;clear result code/NMI busy flag
+                .endif
                 lda LC287       ;test b7=d0, b6=d1 uncal flags
                 bit LC287
                 bcc L8CB3       ;if drive 0 is selected
@@ -2764,8 +2887,12 @@ L8CF8:
                 .else
                 sbc L00A3       ;c=1; subtract number of sectors per track
                 eor #$FF        ;take two's complement
+                .if dfs229
+                inc a           ;=number of sectors to end of track
+                .else
                 clc             ;can save 3 bytes (EOR #$FF:ADC L00A3)
                 adc #$01        ;=number of sectors to end of track
+                .endif
                 .endif
                 sta L00A5       ;store sector count
                 lda atemp       ;if more than 255 sectors to transfer
@@ -2786,7 +2913,12 @@ L8D14:
                 cmp #$01        ;if doing no whole sectors, only partial
                 bne L8D2B       ;then no sector advance occurs
                 lda L8FA7-L8F86+intnmi+$01 ;so emulate L8FA7: ?$0D4C=?$0D22
+                .if dfs229
+                ldx L8FA9-L8F86+intnmi+$01
+                sta intnmi,x
+                .else
                 sta L8FD1-L8F86+intnmi+$01 ;discard/write zeroes at end of count
+                .endif
 L8D2B:
                 lda itemp       ;get LSB number of sectors to transfer
                 sec             ;subtract number of sectors in this operation
@@ -2856,8 +2988,12 @@ emudo2:
                 ror a           ;shift carry into b7
                 sta itemp       ;store LSB = 0 or 128 bytes
                 .else
+                .if dfs229
+                stz atemp
+                .else
                 lda #$00
                 sta atemp       ;clear MSB sector size
+                .endif
                 lda (temp),y    ;3rd parm, sector size+count
                 and #$E0        ;extract sector size code
                 bne L8D89       ;if %000, 128-byte sectors
@@ -2906,7 +3042,53 @@ L8DC4:
 L8DC5:                          ;Execute WD 1770 command
                 ldy #$06
                 lda (temp),y
+
 L8DC9:                          ;Execute WD 1770 command in A
+                .if dfs229
+L8DE2_229:
+                tay
+                pha
+                lda L00A4
+                lsr a
+                beq L8E21_229
+                bcs L8E21_229
+                pla
+                pha
+                cmp #$20
+                bcs L8E21_229
+                cmp #$10
+                bcc L8E0B_229
+                lda fdcdat
+                pha
+L8DF9_229:
+                pla
+                cmp fdctrk
+                beq L8E21_229
+                pha
+                lda #$50
+                bcs L8E06_229
+                lda #$70
+L8E06_229:
+                jsr L8DE2_229
+                bra L8DF9_229
+
+L8E0B_229:
+                lda fdctrk
+                sta fdccmd
+                lda #$10
+                bra L8E17_229
+
+L8E15_229:
+                lda #$60
+L8E17_229:
+                jsr L8DE2_229
+                lda fdcsta
+                bit #4
+                beq L8E15_229
+L8E21_229:
+                pla
+                .endif
+                
                 ldy #$FF        ;y=$FF going to 0, point to start of table:
 L8DCB:
                 iny             ;search table for command
@@ -2918,6 +3100,7 @@ L8DCB:
                 ror L00A2       ;c=1; set b7 of flag, b7=1 ISR busy
                 pla             ;restore command
                 bpl L8E29       ;if a Type I command then branch
+                .if !dfs229
                 bit L00A1       ;else test write flag
                 bvc L8DE9       ;if writing to disc
                 ldy track
@@ -2925,6 +3108,7 @@ L8DCB:
                 bcc L8DE9
                 ora #$02        ;then enable write precompensation
 L8DE9:
+                .endif
                 sta L00A7       ;store command byte
                 ldy #$01        ;if command = $C0, read address
                 cmp #$C0        ;then Y=1 read one address
@@ -2959,6 +3143,24 @@ L8E1B:
                 bne L8E26
                 jsr L8E5A       ;then wait until controller idle
 L8E26:
+                .if dfs229
+                lda L00A7
+                bmi L8E89_229
+                cmp #$20
+                bcc L8E89_229
+                and #$03
+                cmp #$20
+                bne L8E89_229
+                ldy #$30
+L8E83_229:
+                dec a
+                bne L8E83_229
+                dey
+                bne L8E83_229
+
+L8E89_229:
+                .endif
+                
                 lda L00A2       ;return masked controller status
                 rts
 
@@ -2966,7 +3168,7 @@ L8E29:                          ;type I command
                 ldy #$01        ;execute it once
                 sty L00A5
                 ora L00A4       ;apply stepping speed bits in b1,b0
-                .if dfs226||dfs225
+                .if dfs226||dfs225||dfs229
                 sta L00A7
                 .endif
                 sta fdccmd      ;send command to FDC
@@ -2981,8 +3183,12 @@ L8E3A:
                 bpl L8E3A       ;if Escape not pressed then keep waiting
                 lda #$40        ;else $0D00 = RTI
                 sta intnmi+$00
+                .if dfs229
+                stz latch       ;b2=0 put FDC in reset
+                .else
                 lda #$00        ;b2=0 put FDC in reset
                 sta latch
+                .endif
                 .if BUGFIX
                 lda #$FF
                 .else
@@ -3108,7 +3314,7 @@ L8EF4:                          ;Set Tube presence flag
                 rts
 
 L8F04:                          ;Claim NMI
-                .if dfs225
+                .if dfs225||dfs229
                 ldx #2
 L8F3B_225:
                 lda L00B0,x
@@ -3120,7 +3326,7 @@ L8F3B_225:
                 ldx #$0C        ;service call $0C = claim NMI
                 ldy #$FF        ;call OSBYTE with Y=$FF
                 jsr osbyte
-                .if dfs225
+                .if dfs225||dfs229
                 pla
                 sta L00B0
                 pla
@@ -3183,10 +3389,14 @@ L8F37:                          ;Set track stepping speed from CMOS RAM/keyboard
                 ldx #$0B        ;$0B = ADFS start-up options, keyboard settings and floppy drive parameters
                 jsr osbyte
                 tya
+                .if dfs229
+                and #$03
+                .else
                 and #$02        ;if bit 1 set
                 beq L8F45
                 lda #$03        ;then set $03 = slowest stepping (30 ms)
 L8F45:
+                .endif
                 sta L00A4       ;else set $00 = fastest stepping (6 ms)
                 rts
 
@@ -3204,13 +3414,34 @@ L8F4A:
                 bvc L8F69
                 lda #L8FDD-L8F8E-$02 ;else set NMISR to write zeroes at end of transfer
                 sta L8FA7-L8F86+intnmi+$01
+                .if dfs229
+                lda #L8F96-L8F8E-$02
+                ;L8FD8-L8F8E-$02
+                bit xtemp
+                bmi L8FD7_229
+                sta L8FD1-L8F86+intnmi+$01
+L8FD7_229:
+                stz L8FA7-L8F86+intnmi+$01
+                .endif
                 ldx #L8FF2-L8FE4 ;point X to last byte of write overlay
 L8F60:
                 lda L8FE4-$01,x ;replace part of NMI service routine with write overlay
                 sta L8FBF-L8F86+intnmi-$01,x
                 dex
                 bne L8F60       ;finish with X=0
+                .if dfs229
+                bra L8FF4_229
+                .endif
+                
 L8F69:
+                .if dfs229
+                bit xtemp
+                bvc L8FF4_229
+                ldy dcby
+                lda seqbuf,y
+                sta L8FC2-L8F86+intnmi+$02
+L8FF4_229:
+                .endif
                 bit L00A1       ;test Tube flag
                 bmi L8F7B       ;if transferring to host
                 ldy #$01        ;then get LSB of data address from control block
@@ -3241,6 +3472,7 @@ L8F8E:
                 and #$FC        ;else mask off {DRQ Busy}; b7 already clear
                 bne L8F98       ;if S6..S2 set then return result code
                 dec L00A5       ;else command complete; decrement sector count
+L8F96:
                 bne L8F9C       ;if more sectors then advance to next sector
 L8F98:
                 sta L00A2       ;clear NMI busy flag, b6..2=status
@@ -3256,6 +3488,7 @@ L8F9C:                          ;advance sector
                 bcc L8FAC       ;if set
 L8FA7:
                 lda #L8FD8-L8F8E-$02 ;then discard data/write zeroes at end of byte count
+L8FA9:
                 sta L8FD1-L8F86+intnmi+$01
 L8FAC:
                 inc sector      ;increment current sector
@@ -3272,11 +3505,24 @@ L8FB0:
 L8FBF:                          ;data request handler
                 lda fdcdat      ;read data register
 L8FC2:
+                .if dfs229
+                sta $ff00       ;if reading to host, address pasted here
+                .else
                 sta reg3        ;if reading to host, address pasted here
+                .endif
 L8FC5:
                 inc L8FC2-L8F86+intnmi+$01 ;increment low byte of host address
+                .if dfs229
+                bra L9055_229
+L9055_229:
+                sta reg3
+                inc L9055_229-L8F86+intnmi+$01
+                bne L8FCD
+                inc L9055_229-L8F86+intnmi+$02
+                .else
                 bne L8FCD       ;(branched-over if transferring to/from Tube)
                 inc L8FC2-L8F86+intnmi+$02 ;carry out to high byte
+                .endif
 L8FCD:
                 dec L00A6       ;decrement byte count
                 bne L8FD6       ;exit ISR if bytes remaining
@@ -3293,14 +3539,23 @@ L8FD8:
                 rti             ;return from interrupt
 
 L8FDD:
+                .if dfs229
+                stz fdcdat
+                .else
                 lda #$00        ;write zero to data register
                 sta fdcdat
+                .endif
                 pla             ;restore A from main thread
                 rti             ;return from interrupt
 
+                .if dfs229
+                nop
+                .endif
 
 L8FE4:                          ;Write overlay pasted to $0D39
+                .if !dfs229
                 lda reg3        ;if writing to host, address pasted here / L8FBF
+                .endif
 L8FE7:
                 sta fdcdat      ;write data register
                 inc L8FBF-L8F86+intnmi+$01 ;increment low byte of host address
@@ -3488,12 +3743,18 @@ L90D1:
 ;Table of WD 1770 commands
 L90D5:
                 .char $00,$10,$40,$50
+                .if dfs229
+                .char $70
+                .endif
                 .char $80,$81,$83,$A0
                 .char $A1,$C0,$E0,$F0
 
 ;Table of WD 1770 status code mask values
 L90E1:
                 .char $18,$18,$18,$18
+                .if dfs229
+                .char $18
+                .endif
                 .char $3F,$1F,$1F,$5F
                 .char $5F,$17,$1B,$5F
 
@@ -4062,6 +4323,10 @@ escape:
 L93F8:
                 rts
 
+                .if dfs229
+L948A_229:
+                stz xtemp
+                .endif
 L93F9:                          ;Transfer data and report errors L4
                 jsr L94CA       ;ensure not writing to 40-track mode drive
                 lda #$06        ;5 attempts
@@ -4235,7 +4500,7 @@ close:
                 .endif
                 
 close2:                         ;Close all files
-                .if BUGFIX||dfs225
+                .if BUGFIX||dfs225||dfs229
                 lda #$77        ;call OSBYTE $77 = close *SPOOL/*EXEC files
                 jsr osbyte
                 .else
@@ -4592,7 +4857,12 @@ wargs:                          ;OSARGS
                 .endif
                 cmp #$01        ;else compare A - 1
                 bne vradr       ;if A=0 or A=2 then return PTR or EXT
+                .if dfs229
+                jsr dcrych
+                jmp L9AC7_229
+                .else
                 jmp vstar       ;else A=1 set PTR
+                .endif
 
 wargs1:                         ;OSARGS Y=0
                 cmp #$02        ;if A>=2
@@ -4637,8 +4907,22 @@ vradr:                          ;OSARGS A=0/2, Y>0 return PTR/EXT
                 
 L97A9:                          ;OSARGS A=3, Y>0 set EXT
                 jsr dcrych      ;ensure file handle valid and open
-                .if dfs225
+                .if dfs225||dfs229
                 jsr vbput1
+                .if dfs229
+                lda #$20
+                jsr setbit
+                ldy dcby
+                lda seqlla,y
+                cmp 0,x
+                lda seqlma,y
+                sbc 1,x
+                lda seqlha,y
+                sbc 2,x
+                lda #0
+                sbc 3,x
+                bcs L988F_229
+                .else
                 jsr scmp
                 bcc L982D_225
                 phy
@@ -4665,7 +4949,7 @@ L9816_225:
                 lda #$20
                 jsr setbit
                 jmp vstarc
-
+                .endif
 L982D_225:
                 phx
                 phy
@@ -4682,17 +4966,35 @@ L9831_225:
 L9840_225:
                 ldy dcby
                 phy
+                .if dfs229
+                ldx #$fd
+                .else
                 ldx #$7d        ;-4
+                .endif
 L9846_225:
+                .if dfs229
+                lda LC2A0-$fd,x
+                .else
                 lda LC2A0-$7d,x
+                .endif
                 sta seqpl,y
                 iny
                 inx
+                .if dfs229
+                bne L9846_225
+                dex
+                stx LC2A0+$06
+                .else
                 bpl L9846_225
+                .endif
                 ply
+                .if dfs229
+                jmp L9C29_229
+                .else
                 jsr vstarc
                 stx LC2A0+2
                 rts
+                .endif
                 
                 .elsif BUGFIX
                 jsr scmp        ;compare EXT - requested EXT
@@ -4761,6 +5063,22 @@ args3x:
                 .endif
                 .endif
 
+                .endif
+
+                .if dfs229
+; Could this be merged in with any of the code above??
+L988F_229:
+                lda 0,x
+                sta seqlla,y
+                lda 1,x
+                sta seqlma,y
+                lda 2,x
+                sta seqlha,y
+                jsr pcmp_229
+                bcc L98A6_229
+                jsr L9C1B_229
+L98A6_229:
+                rts
                 .endif
 
 cheeky:                         ;Validate workspace offset
@@ -4863,7 +5181,9 @@ wfeof:                          ;FSC  1 = read EOF state
                 txa             ;transfer file handle to Y
                 tay
                 jsr dcrych      ;ensure file handle valid and open
+                .if !dfs229
                 tya             ;a=y = channel workspace pointer
+                .endif
                 jsr pcmp        ;compare PTR - EXT
                 bne wfeof0      ;if PTR <> EXT (blech!) then return 0
                 ldx #$FF        ;else return $FF, we are at end of file
@@ -4897,7 +5217,9 @@ illeof:                         ;Raise "EOF" error
 wbget:                          ;OSBGET
                 jsr savit       ;save XY
                 jsr dcrych      ;ensure file handle valid and open
+                .if !dfs229
                 tya             ;a=y = channel workspace pointer
+                .endif
                 jsr pcmp        ;compare PTR - EXT
                 bne noteof      ;if at EOF
                 lda seqflg,y    ;then test EOF warning flag b4
@@ -4955,6 +5277,15 @@ vbgetx:
                 pla             ;return byte in A, set N and Z to match
                 rts
 
+                .if dfs229
+L99A5_229:
+                jsr L9EBD_229
+                sta seqdah,y
+                lda lbalo
+                sta seqdal,y
+                .endif
+
+                .if !dfs229
 setda:                          ;Set buffer sector address from PTR
                 clc
                 lda seqloc,y    ;get LSB start sector of open file
@@ -4966,6 +5297,7 @@ setda:                          ;Set buffer sector address from PTR
                 adc seqph,y     ;add MSB of PTR
                 sta lbahi       ;store MSB sector address
                 sta seqdah,y    ;store MSB sector address of buffer:
+                .endif
 setcbf:                         ;Set buffer-contains-PTR channel flag
                 lda #$80        ;b7=1 buffer contains byte at PTR:
 setbit:                         ;Set channel flag bits (A = OR mask)
@@ -4992,6 +5324,7 @@ xblock:                         ;Read/write sector buffer L6
                 .endif
                 inc seqsem      ;set *SPOOL/*EXEC critical flag (now $00)
                 ldy dcby        ;put channel workspace pointer in Y
+                .if !dfs229
                 lda seqbuf,y    ;get MSB address of buffer in shared wksp
                 sta lodhi
                 lda #$FF        ;set high word of buffer address = $FFFF
@@ -5000,15 +5333,21 @@ xblock:                         ;Read/write sector buffer L6
                 lda #$00
                 sta lodlo       ;clear LSB buffer address
                 sta lenlo
+                .endif
                 lda #$01        ;256 bytes to transfer
                 sta lenhi
+                .if dfs229
+                jsr L9C64_229
+                .endif
                 .if SQUEEZE
                 .else
                 plp             ;redundant
                 .endif
                 bcs xblrd       ;if C was 1 on entry then read buffer
+                .if !dfs229
                 lda seqdal,y    ;else copy channel's sector buffer address
                 sta lbalo       ;to OSFILE control block (big-endian)
+                .endif
                 lda seqdah,y
                 sta lbahi
                 jsr blkwr       ;write ordinary file L5
@@ -5027,7 +5366,7 @@ bflx:
                 rts
 
 vbput1:
-                .if dfs225
+                .if dfs225||dfs229
                 lda seqrdo,y    ;test channel read-only bit
                 bmi vbput2      ;if b7=1 then raise "Read only"
                 lda seqlok,y    ;test file locked bit
@@ -5050,7 +5389,7 @@ wbput:                          ;OSBPUT
                 jsr dcrych      ;ensure file handle valid and open
 wbput1:
                 pha             ;save byte to write
-                .if dfs225
+                .if dfs225||dfs229
                 jsr vbput1      ;perform read only/locked checks
                 .else
                 lda seqrdo,y    ;test channel read-only bit
@@ -5083,6 +5422,9 @@ wbput1:
                 sty atemp       ;redundant (vestigial in DFS 1.20)
                 .endif
                 sty dcby        ;else save workspace pointer
+                .if dfs229
+L9A56_229:
+                .endif
                 jsr hmtspe      ;close *SPOOL/*EXEC file on error
                 jsr estrng      ;and raise "Can't extend" error.
                 .char $BF
@@ -5116,6 +5458,9 @@ vokspl:
                 jsr dirout      ;write volume catalogue
                 ldy dcby        ;put channel workspace pointer in Y
 notful:                         ;write byte to file
+                .if dfs229
+                jsr L9C4B_229
+                .else
                 lda seqflg,y    ;test channel flags
                 bmi vbputb      ;if b7=1 buffer-contains-PTR then write byte
                 jsr bflush      ;else ensure buffer up-to-date on disc L6
@@ -5131,6 +5476,7 @@ notend:
                 sec             ;c=1 read buffer from disc
                 jsr xblock      ;read/write sector buffer L6
 vbputb:
+                .endif
                 lda seqpl,y     ;get LSB of PTR
                 sta work+$00    ;set LSB of buffer pointer
                 lda seqbuf,y    ;get MSB buffer pointer from channel workspace
@@ -5139,6 +5485,10 @@ vbputb:
                 ldy #$00        ;set Y=0 for indirect indexed store
                 sta (work),y    ;put byte in channel buffer at old PTR
                 ldy dcby        ;put channel workspace pointer in Y
+                .if dfs229
+                jmp L9E58_229
+
+                .else
                 lda #$40        ;b6=1, buffer has changed
                 jsr setbit      ;set channel flag bits (A = OR mask)
                 inc work+$00    ;increment PTR
@@ -5227,7 +5577,12 @@ vstarc:                         ;Update buffer-contains-PTR channel flag
                 cmp seqdal,y
                 bne vbputx      ;if requested PTR within current buffer
                 jmp setcbf      ;then set buffer-contains-PTR channel flag.
+                .endif
 
+                .if dfs229
+pcmp_229:
+                tya
+                .endif
 pcmp:                           ;Compare PTR - EXT (A=Y), - allocation (A=Y+4)
                 tax             ;return C=1 iff at/past EOF or allocation
                 lda seqph,y     ;return Z=1 iff at EOF or equal to allocation
@@ -5241,6 +5596,602 @@ pcmp:                           ;Compare PTR - EXT (A=Y), - allocation (A=Y+4)
 pcmpx:
                 rts
 
+                .if dfs229
+
+L9AC7_229:
+                ldy #$fc
+L9AC9_229:
+                lda 0,x
+                sta LC2A0-$fc,y
+                inx
+                iny
+                bne L9AC9_229
+
+                lda #1
+L9AD4_229:
+                pha
+                ldy dcby
+                jsr setq
+                lda LC2A0+$03
+                beq L9AE6_229
+                stz LC2A0+$03
+                stz LC2A0+$02
+L9AE6_229:
+                jsr L9BEE_229
+                bcs L9B63_229
+                jsr vbput1
+                jsr L9BDB_229
+                bcs L9B63_229
+                jsr vlook
+                ldx LC2A0+$03
+                lda cathig-$01,x
+                sec
+                sbc cathig+$07,x
+                sta seqem,y
+                lda cathig-$02,x
+                sbc cathig+$06,x
+                and #3
+                sta seqeh,y
+                lda #0
+                sta LC318,y
+                jsr L9BDB_229
+                php
+                bcs L9B2A_229
+                stz LC2A0+$00
+                lda seqem,y
+                sta LC2A0+$01
+                lda seqeh,y
+                sta LC2A0+$02
+                bra L9B46_229
+
+L9B2A_229:
+                clc
+                lda LC2A0+$00
+                ora LC2A0+$01
+                beq L9B3B_229
+                lda seqeh,y
+                cmp LC2A0+$02
+                beq L9B46_229
+
+L9B3B_229:
+                lda #0
+                sta seqem,y
+                adc LC2A0+$02
+                sta seqeh,y
+
+L9B46_229:
+                jsr lfour
+                eor cathig+$06,x
+                and #$30
+                eor cathig+$06,x
+                sta cathig+$05,x
+                lda seqem,y
+                sta cathig+$05,x
+                stz cathig+$04,x
+                phy
+                jsr dirout
+                ply
+                plp
+L9B63_229:
+                pla
+                beq L9BDA_229
+                php
+                jsr L9BEE_229
+                bcs L9BCE_229
+                jsr L9C1B_229
+                jsr L9C4B_229
+                lda seqpl,y
+                jsr L9C7B_229
+                lda #$40
+                jsr setbit
+                sec
+                lda LC2A0+$01
+                sbc seqlma,y
+                sta L00C1
+                lda LC2A0+$02
+                sbc seqlha,y
+                tax
+                ora L00C1
+                beq L9BC0_229
+                txa
+                jsr lfour
+                ora seqdah,y
+                sta L00C2
+                jsr L9C64_229
+                lda LC2A0+$00
+                beq L9BA4_229
+                dec L00C0
+L9BA4_229:
+                lda #$80
+                sta xtemp
+                lda #$a0
+                sta LC290+$06
+                jsr L9E9A_229
+                lda #0
+                jsr L9C7B_229
+                jsr L9C0C_229
+                jsr L99A5_229
+                lda #$bf
+                jsr clrbit
+L9BC0_229:
+                phy
+                iny
+                iny
+                iny
+                iny
+                jsr L9C0C_229
+                ply
+                lda #$20
+                jsr setbit
+L9BCE_229:
+                jsr L9C0C_229
+                jsr L9C29_229
+                plp
+                bcs L9BDA_229
+                jmp L9A56_229
+L9BDA_229:
+                rts
+
+L9BDB_229:
+                lda LC318,y
+                cmp LC2A0+$00
+                lda seqem,y
+                sbc LC2A0+$01
+                lda seqeh,y
+                sbc LC2A0+$02
+                rts
+
+L9BEE_229:
+                lda #0
+                cmp LC2A0+$03
+                bne L9C0B_229
+                lda seqlha,y
+                cmp LC2A0+$02
+                bne L9C0B_229
+                lda seqlma,y
+                cmp LC2A0+$01
+                bne L9C0B_229
+                lda seqlla,y
+                cmp LC2A0+$00
+L9C0B_229:
+                rts
+
+L9C0C_229:
+                phy
+                ldx #$fd
+L9C0F_229:
+                lda LC2A0-$fd,x
+                sta seqpl,y
+                iny
+                inx
+                bne L9C0F_229
+                ply
+L9C1A_229:
+                rts
+
+L9C1B_229:
+                ldx #$02
+                phy
+L9C1E_229:
+                lda seqlla,y
+                sta seqpl,y
+                iny
+                dex
+                bpl L9C1E_229
+                ply
+L9C29_229:
+                lda #$6f
+                jsr clrbit
+                lda seqloc,y
+                adc seqpm,y
+                tax
+                lda seqlh,y
+                and #3
+                adc seqph,y
+                cmp seqdah,y
+                bne L9C1A_229
+                txa
+                cmp seqdal,y
+                bne L9C1A_229
+                jmp setcbf
+
+L9C4B_229:                      ;2.29 notful??
+                lda seqflg,y
+                bne L9C1A_229
+                jsr bflush
+                lda seqlla,y
+                bne L9C60_229
+                jsr pcmp_229
+                bne L9C60_229
+                jmp L99A5_229
+
+L9C60_229:
+                sec
+                jmp xblock
+
+L9C64_229:
+                stz L00BC
+                lda seqbuf,y
+                sta L00BD
+                lda #$ff
+                sta ldlow+2
+                sta ldlow+3
+                stz L00C0
+                lda seqdal,y
+                sta L00C3
+                rts
+
+L9C7B_229:
+                sta L00BA
+                lda seqbuf,y
+                sta L00BA
+                lda #0
+L9C84_229:
+                sta (L00BA)
+                inc L00BA+0
+                bne L9C84_229
+                rts
+
+L9C8B_229:                      ;2.29 wbgpbb??
+                jsr L9E8C_229
+                ldx #3
+L9C90_229:
+                lda dosram+$09,x
+                sta LC2A0,x
+                dex
+                bpl L9C90_229
+                ldy dosram+$00
+                jsr dcrych
+                jsr setq
+                plp
+                bcs L9CAA_229
+                lda #1
+                jsr L9AD4_229
+L9CAA_229:
+                ldx #$fc
+                phy
+                clc
+L9CAE_229:
+                lda seqpl,y
+                inx
+                bne L9CB6_229
+                lda #0
+L9CB6_229:
+                dex
+                sta dosram+$09-$fc,x
+                adc dosram+$05-$fc,x
+                sta LC2A0-$fc,x
+                iny
+                inx
+                bne L9CAE_229
+                ply
+                bcc L9CCA_229
+                sty LC2A0+$03
+L9CCA_229:
+                sec
+                jsr LA351_229
+                php
+                txa
+                jsr L9AD4_229
+                php
+                ldx #$7c
+                sec
+L9CD7_229:
+                lda LC2A0-$7c,x
+                pha
+                sbc dosram+$09-$7c,x
+                sta L00C4-$7c,x
+                pla
+                sta dosram+$09-$7c,x
+                lda dosram+$01-$7c,x
+                sta L00C8-$7c,x
+                inx
+                bpl L9CD7_229
+
+                ldx #$7c
+                sec
+L9CEF_229:
+                lda dosram+$05-$7c,x
+                sbc L00C4-$7c,x
+                sta dosram+$05-$7c,x
+                inx
+                bpl L9CEF_229
+                lda seqpl,y
+                beq L9D02_229
+
+                jsr L9DD1_229
+L9D02_229:
+                lda L00C5
+                ora L00C6
+                bne L9D0B_229
+                jmp L9D9C_229
+
+L9D0B_229:
+                jsr bflush
+                jsr clrcbf
+                lda #0
+                sta seqdal,y
+                sta seqdah,y
+                pha
+                ldx ctemp
+                lda L9DCF_229,x
+                sta LC290+$06
+                txa
+                bne L9D34_229
+                jsr L9BEE_229
+                bcc L9D33_229
+                beq L9D33_229
+                pla
+                lda L00C4
+                pha
+                stz L00C4
+L9D33_229:
+                inx
+L9D34_229:
+                lda L00C4,x
+                sta L00C0,x
+                lda L00C8,x
+                sta L00BC,x
+                lda L00CA,x
+                sta ldlow+2,x
+                dex
+                bpl L9D34_229
+
+                jsr L9EBD_229
+                lda #$40
+                sta xtemp
+                lda L00C6
+                jsr lfour
+                tsb L00C2
+                jsr L9E9A_229
+                phy
+
+                ldx #$7d
+                clc
+L9D59_229:
+                lda seqpl,y
+                adc L00C4-$7d,x
+                sta seqpl,y
+                iny
+                inx
+                bpl L9D59_229
+
+                ply
+                jsr L9E71_229
+                phy
+
+                ldx #$7c
+                clc
+L9D6D_229:
+                lda L00C8-$7c,x
+                adc L00C4-$7c,x
+                stz L00C4-$7c,x
+                sta L00C8-$7c,x
+                sta dosram+$01-$7c,x
+                inx
+                bpl L9D6D_229
+
+                ply
+                lda ctemp
+                beq L9D99_229
+                jsr L99A5_229
+                lda seqpl,y
+                bne L9D99_229
+                jsr clrcbf
+                tya
+                tax
+                lda seqdal,x
+                bne L9D96_229
+                dec seqdah,x
+L9D96_229:
+                dec seqdal,x
+L9D99_229:
+                pla
+                sta L00C4
+L9D9C_229:
+                lda L00C4
+                beq L9DA3_229
+                jsr L9DD1_229
+L9DA3_229:
+                plp
+                bcs L9DA9_229
+                jmp L9A56_229
+
+L9DA9_229:
+                ldx #$fc
+                phy
+L9DAC_229:
+                lda (L00C8-$fc)&$ffff,x
+                sta dosram+$01-$fc,x
+                inx
+                bne L9DAC_229
+                jsr LA458_229
+
+                ldy #$0c
+L9DBA_229:
+                lda dosram,y
+                sta (atemp),y
+                dey
+                bpl L9DBA_229
+                ply
+                plp
+                bcs L9DCD_229
+                lda #$10
+                jsr setbit
+                sec
+                rts
+
+L9DCD_229:
+                clc
+                rts
+
+L9DCF_229:
+                .byte $a0
+                .byte $80
+
+L9DD1_229:
+                jsr L9C4B_229
+                lda seqbuf,y
+                sta L00BA+$01
+                lda seqpl,y
+                sta L00BA+$00
+                phy
+                jsr L9E30_229
+                ply
+L9DE3_229:
+                ldx #0
+L9DE5_229:
+                lda L00C4,x
+                bne L9DF0_229
+                inx
+                cpx #4
+                bcc L9DE5_229
+                bra L9E2A_229
+
+L9DF0_229:
+                dec L00C4,x
+                dex
+                bpl L9DF0_229
+                bit tumflg
+                lda ctemp
+                bvs L9E09_229
+                bne L9E03_229
+                lda (L00C8)
+                bra L9E0E_229
+
+L9E03_229:
+                lda (L00BA)
+                sta (L00C8)
+                bra L9E17_229
+
+L9E09_229:
+                bne L9E12_229
+                lda reg3
+L9E0E_229:
+                sta (L00BA)
+                bra L9E17_229
+
+L9E12_229:
+                lda (L00BA)
+                sta reg3
+L9E17_229:
+                ldx #$7c
+L9E19_229:
+                inc dosram+$01-$7c,x
+                inc L00C8-$7c,x
+                bne L9E23_229
+                inx
+                bpl L9E19_229
+
+L9E23_229:
+                jsr L9E53_229
+                lda L00BA
+                bne L9DE3_229
+L9E2A_229:
+                phy
+                jsr L9E8C_229
+                ply
+                rts
+
+L9E30_229:
+                stz tumflg
+                lda dosram+$03
+                and dosram+$04
+                ora notube
+                inc a
+                beq L9E52_229
+                dec tumflg
+                jsr clatub
+                lda ctemp
+                ldx #<(dosram+$01)
+                ldy #>(dosram+$01)
+                jsr tubadr
+                jsr L9E52_229
+L9E52_229:
+                rts
+
+L9E53_229:
+                lda ctemp
+                bne L9E5D_229
+L9E58_229:
+                lda #$40
+                jsr setbit
+L9E5D_229:
+                tya
+                tax
+                inc L00BA
+                inc seqpl,x
+                bne L9E71_229
+                jsr clrcbf
+                inc seqpm,x
+                bne L9E71_229
+                inc seqph,x
+L9E71_229:
+                jsr pcmp_229
+                bcc L9E8B_229
+                beq L9E8B_229
+                lda #$20
+                jsr setbit
+                ldx #$02
+                phy
+L9E80_229:
+                lda seqpl,y
+                sta seqlla,y
+                iny
+                dex
+                bpl L9E80_229
+                ply
+L9E8B_229:
+                rts
+
+L9E8C_229:
+                bit tumflg
+                bpl L9E99_229
+                phy
+                jsr L8F2F
+                stz tumflg
+                ply
+L9E99_229:
+                rts
+
+L9E9A_229:
+                phy
+                inc seqsem
+                jsr blkxx2
+                dec seqsem
+                ply
+                rts
+
+L9EA6_229:
+                jsr L9BEE_229
+                bcs L9EBC_229
+                phy
+                ldx #$fd
+L9EAE_229:
+                lda seqlla,y
+                sta LC2A0-$fd,x
+                iny
+                inx
+                bne L9EAE_229
+                stz LC2A0+$03
+                ply
+L9EBC_229:
+                rts
+
+L9EBD_229:
+                clc
+                lda seqloc,y
+                adc seqpm,y
+                sta L00C3
+                lda seqlh,y
+                and #$03
+                adc seqph,y
+                sta L00C2
+                rts
+                
+                .endif
+
+                .if !dfs229
 scmp:                           ;Compare EXT - OSARGS parameter
                 lda seqlla,y    ;return C=1 iff EXT >= parameter
                 cmp $00,x
@@ -5249,7 +6200,8 @@ scmp:                           ;Compare EXT - OSARGS parameter
                 lda seqlha,y
                 sbc $02,x
                 rts
-
+                .endif
+                
                 .endsection DOS05
 
                 .section DOS06
@@ -5332,10 +6284,10 @@ L9B0F:
                 .word return-$01 ;Svc $23 = report top priv wksp $8626
                 .word L9D28 -$01 ;Svc $24 = abs wksp HAZEL count $9D28
                 .word L9D2B -$01 ;Svc $25 = retn filing sys info $9D2B
-                .if BUGFIX||dfs225
+                .if BUGFIX||dfs225||dfs229
                 .word shut  -$01 ;Svc $26 = *SHUT
                 .endif
-                .if BUGFIX
+                .if BUGFIX||dfs229
                 .word reset -$01 ;Svc $27 = reset occurred
                 .endif
 L9B0F_end:
@@ -5384,7 +6336,7 @@ L9B70:
                 pha             ;save cold start flag
                 lda #$06        ;FSC  6 = new filing system starting up
                 jsr osfscm      ;issue Filing System call
-                .if !dfs225
+                .if !dfs225&&!dfs229
                 lda fdcdat
                 .endif
                 ldx #$0D        ;7 vectors to replace:
@@ -5486,6 +6438,8 @@ L9C16:
                 sty seqsem      ;*SPOOL and *EXEC files are non-critical
                 .if dfs225
                 sty LC2A0+$02
+                .elsif dfs229
+                sty LC2A0+$06
                 .endif
 bootit:
                 jsr L8EF4       ;[D]set Tube presence flag
@@ -5576,8 +6530,12 @@ L9C66:
                 phy             ;65C02 instruction
                 sta temp+$01    ;set up pointer to private page
                 .endif
+                .if dfs229
+                stz temp+$00
+                .else
                 lda #$00
                 sta temp+$00
+                .endif
                 .endif
                 lda #$FD        ;OSBYTE $FD = read/write last reset type
                 jsr readby      ;call OSBYTE with X=$00, Y=$FF
@@ -5858,7 +6816,7 @@ L9D3B:
 L9D51:
                 .endif
 
-                .if BUGFIX||dfs225
+                .if BUGFIX||dfs225||dfs229
 shut:                           ;Service call $26 = *SHUT command issued
                 .if dfs225
                 phy
