@@ -353,7 +353,7 @@ seqlha=seqmap+$0016             ;MSB of open file's extent
 seqflg=seqmap+$0017             ;channel flags b7=buffer contains PTR b6=buffer changed
                                 ;b5=EXT changed b4=EOF warning given b1..b0=drive number
                 .if dfs229||dfs245
-LC318=seqmap+$0018
+LC318=seqmap+$0018              ;bottom 8 bits of file size??
                 .endif
 seqem=seqmap+$0019              ;LSB of number of sectors allocated to file
 seqeh=seqmap+$001A              ;MSB of number of sectors allocated to file
@@ -420,6 +420,9 @@ oscli=$FFF7                     ;Execute command line
 ; There is one section for each region that obviously corresponds to
 ; one of the source files in AcornDNFSv300, named after that file.
 ; Then some extras for any additions.
+;
+; The layout was guessed at based on DFS 2.24 and DFS 2.26, and I
+; didn't rethink the boundaries after looking at DFS 2.29 or DFS 2.45.
 
                 .dsection DOS01
                 .dsection DOS01_
