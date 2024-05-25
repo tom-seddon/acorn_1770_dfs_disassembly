@@ -1,20 +1,4 @@
 ; automatically converted from: dfs224.asm.txt
-
-                .if dfs245
-; Bodge region
-
-;L9C1B_229=$9c1b
-;L9EBD_229=$9ebd
-;L9C64_229=$9c64
-vstar=$ffff
-;vstara=$ffff
-vstarc=$ffff
-;L9C4B_229=$9C4B
-;L9E58_229=$9E58
-LA5AE_245=$a5ae
-wbptr=$ffff
-                .endif
-
 ;Disassembly of Acorn DFS 2.24
 ;Greg Cook, 20 May 2024
 
@@ -1018,7 +1002,7 @@ L826E:
 L8271:                          ;Search for file with execute privilege
                 jsr L93AD       ;ensure catalogue loaded with execute privilege
                 lda #buffer-buffer ;compare with name in buffer
-                .if dfs229
+                .if dfs229||dfs245
                 bra L8296
                 .else
                 beq L8296       ;always taken
@@ -1038,7 +1022,7 @@ lookw0:
 
 next:                           ;Find next matching file
                 ldx #buffer-buffer ;compare with name in buffer
-                .if dfs229
+                .if dfs229||dfs245
                 bra next0
                 .else
                 beq next0       ;always taken
@@ -2111,7 +2095,7 @@ defcon:
                 jsr frmnam      ;set current file from argument pointer
                 sty linadr+$00  ;store offset of command line tail
                 jsr L8271       ;search for file in catalogue
-                .if dfs225||dfs229
+                .if dfs225||dfs229||dfs245
                 bcs L888F_225
                 .else
                 bcs defsuc      ;if found then execute command binary
@@ -2123,7 +2107,7 @@ defcon:
                 jsr dodriv      ;select drive in A
                 jsr frmnm1      ;parse file spec from argument pointer
                 jsr L8271       ;search for file in catalogue
-                .if dfs225||dfs229
+                .if dfs225||dfs229||dfs245
                 bcs L888F_225
                 .else
                 bcs defsuc      ;if found then execute it
@@ -2926,7 +2910,7 @@ L8CD1:                          ;Do OSWORD $7F operation
                 bcs L8CCE       ;then execute WD 1770 command in A
                 ldy #$08        ;2nd parm, starting sector
                 lda (temp),y
-                .if dfs229
+                .if dfs229||dfs245
                 lsr xtemp       ;I don't get it??
                 bcs L8D49       ;Nope, still don't
                 .else
@@ -3294,11 +3278,19 @@ L8E64:                          ;$C0 Read address
                 lda #L8FD8-L8F8E-$02 ;?$0D4C=$48
                 .endif
                 sta L8FD1-L8F86+intnmi+$01 ;set ISR to discard data after count read
+                .if dfs245
+                ldx L9053_229-L8F86+intnmi+$01
+                .else
                 ldx L8F8E-L8F86+intnmi+$01 ;hold DRQ dispatch branch operand
+                .endif
 L8E6C:
                 sbc #$01        ;wait 180 microseconds
                 bne L8E6C
+                .if dfs245
+                stx L9053_229-L8F86+intnmi+$01
+                .else
                 stx L8F8E-L8F86+intnmi+$01 ;restore branch operand (=$2F?? store bytes read)
+                .endif
                 lda #$04        ;4 bytes to read
                 sta L00A6       ;set count of bytes to transfer
                 jsr L8DC5       ;execute WD 1770 command
@@ -3598,7 +3590,7 @@ L8FA4:
                 ror a
                 bcc L8FAC       ;if set
 L8FA7:
-                .if dfs229
+                .if dfs229||dfs245
                 lda #L8FA4-L8F8E-$02
                 .else
                 lda #L8FD8-L8F8E-$02 ;then discard data/write zeroes at end of byte count
@@ -3620,7 +3612,7 @@ L8FB0:
 L8FBF:                          ;data request handler
                 lda fdcdat      ;read data register
 L8FC2:
-                .if dfs229
+                .if dfs229||dfs245
                 sta $ff00       ;if reading to host, address pasted here
                 .else
                 sta reg3        ;if reading to host, address pasted here
@@ -3692,7 +3684,7 @@ L8FE7:
 
 
 L8FF2:                          ;Install i8271 emulator ISR
-                .if dfs229
+                .if dfs229||dfs245
                 ldx L9055_229-L8F86+intnmi+$01 ;extract I/O write address
                 lda L9055_229-L8F86+intnmi+$02 ;from basic ISR, X=LSB A=MSB
                 .else
@@ -4016,7 +4008,7 @@ L91B5:
 L91C1:
                 ldx #<work      ;point XY to modified control block
                 ldy #>work
-                .if dfs229
+                .if dfs229||dfs245
                 jsr L8BBC       ;call internal OSWORD $7F handler
                 .else
                 jsr L8BBF       ;call internal OSWORD $7F handler
@@ -4442,7 +4434,7 @@ L93C2:                          ;Transfer catalogue
                 sta LC290+$02
                 dec LC290+$03   ;set address high bytes = $FF
                 dec LC290+$04
-                .if dfs229
+                .if dfs229||dfs245
                 jsr L948A_229   ;transfer data and report errors L4
                 .else
                 jsr L93F9       ;transfer data and report errors L4
@@ -4485,7 +4477,7 @@ L9410:
                 bcs L9475
                 ldx #<LC290     ;else point XY to high OSWORD $7F control block
                 ldy #>LC290
-                .if dfs229
+                .if dfs229||dfs245
                 jsr L8BBF       ;call internal OSWORD $7F handler
                 .else
                 jsr L8BBC       ;call internal OSWORD $7F handler
@@ -5115,13 +5107,13 @@ L9831_225:
 L9840_225:
                 ldy dcby
                 phy
-                .if dfs229
+                .if dfs229||dfs245
                 ldx #$fd
                 .else
                 ldx #$7d        ;-4
                 .endif
 L9846_225:
-                .if dfs229
+                .if dfs229||dfs245
                 lda LC2A0+$04-$fd,x
                 .else
                 lda LC2A0-$7d,x
@@ -5129,7 +5121,7 @@ L9846_225:
                 sta seqpl,y
                 iny
                 inx
-                .if dfs229
+                .if dfs229||dfs245
                 bne L9846_225
                 dex
                 stx LC2A0+$06
@@ -5137,7 +5129,7 @@ L9846_225:
                 bpl L9846_225
                 .endif
                 ply
-                .if dfs229
+                .if dfs229||dfs245
                 jmp L9C29_229
                 .else
                 jsr vstarc
@@ -5519,7 +5511,7 @@ xblfin:
 bflx:
                 rts
 
-.if dfs229
+.if dfs229||dfs245
 wbptr:
 .endif
 vbput1:
@@ -6395,7 +6387,7 @@ L9AE8:
                 beq inifsy      ;if =$12 then initialise FS in Y
                 cmp #$0B        ;else if in range $00..$0A
                 bcc L9AFA       ;then call handler from jump table
-                .if BUGFIX||dfs229
+                .if BUGFIX||dfs229||dfs245
                 cmp #$28        ;else if >=$28
                 .elsif dfs225
                 cmp #$27        ;else if >=$27
@@ -6672,8 +6664,12 @@ L969E_226:
                 .else
 
 savpri:                         ;Service call $02 = reserve private workspace
-                lda priptr,x    ;space ends at $DC00, highest valid alloc = $DA
+                lda priptr,x    ;space ends at $DC00, highest valid alloc = $DA (if 2 pages) or $DB (if 1 page)
+                .if dfs245
+                cmp #$DC        ;if we got our one page in HAZEL
+                .else
                 cmp #$DB        ;if we got our two pages in HAZEL
+                .endif
                 bcc L9C66       ;during call $21, then initialise
                 tya             ;else put private page in main memory instead
                 sta priptr,x    ;replace private page pointer
@@ -6875,7 +6871,7 @@ unkwrd:                         ;Service call $08 = unrecognised OSWORD
                 bcc unkswz      ;then pass call on to lower ROMs
                 .if dfs245
                 tax
-                jsr LA5AE_245
+                jsr suspri
                 ldy #memflg
                 lda (temp),y
                 pha
@@ -7735,7 +7731,7 @@ fscltb:
                 .if !dfs226
                 .char <(ex    -$01) ;FSC  9 = *EX                   $8238
                 .char <(info  -$01) ;FSC 10 = *INFO                 $8257
-                .if dfs225||dfs229
+                .if dfs225||dfs229||dfs245
                 .char <(nobin -$01) ;FSC 11 = *RUN from library     $8832
                 .else
                 .char <(wnota -$01) ;FSC 11 = *RUN from library     $8832
@@ -7756,7 +7752,7 @@ fschtb:
                 .if !dfs226
                 .char >(ex    -$01)
                 .char >(info  -$01)
-                .if dfs225||dfs229
+                .if dfs225||dfs229||dfs245
                 .char >(nobin -$01)
                 .else
                 .char >(wnota -$01)
@@ -8183,7 +8179,7 @@ chkdsf:                         ;Select source volume
                 bit L00A9       ;if source and dest. are different drives
                 bpl chkds1      ;then return
                 lda #$00        ;else A=$00 = we want source disc
-                .if dfs229
+                .if dfs229||dfs245
                 bra chkds0
                 .else
                 beq chkds0      ;branch (always)
