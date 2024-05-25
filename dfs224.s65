@@ -9536,6 +9536,11 @@ LAA50:                          ;OSBYTE $00 = display MOS version
 
 ; At least some of the labels conflict with the DFS ones. So here,
 ; they all have tu_ prefixes.
+;
+; I have copied in comments from the original Acorn DNFSv300 source
+; and marked up a couple of OSBYTE, but other than that, for comments
+; see https://mdfs.net/Software/Tube/BBC/Host230.lst or
+; https://github.com/tom-seddon/acorn_mos_disassembly/blob/f94a8ecbb8106ed9cf17a612bbde968a352898c6/src/terminal.s65#L6211
 
 tu_org53:
                 .logical $500
@@ -13014,10 +13019,10 @@ LBF8B_226:
 LBF8E_226:
                 stx romid
                 stx romsw
-                lda $bfff
+                lda $bfff ;[BUG] would theoretically corrupt ROM if you press BREAK at just the wrong time - ROM version flag might be a better choice
                 pha
                 eor #$a5
-                sta $bfff       ;would ROM version not make more sense??
+                sta $bfff       
                 cmp $bfff
                 bne LBFA3_226
                 inc L00B0
