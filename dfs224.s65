@@ -1,16 +1,4 @@
 ; automatically converted from: dfs224.asm.txt
-
-                .if dfs229
-; Bodge region
-
-LA351_229=$a351
-vstar=$ffff
-LA458_229=$a458
-LA5A2_229=$a5a2
-;wbgtr=$ffff
-;wbptr=$ffff
-                .endif
-                
 ;Disassembly of Acorn DFS 2.24
 ;Greg Cook, 20 May 2024
 
@@ -5985,7 +5973,7 @@ L9CB6_229:
                 sty LC2A0+$03
 L9CCA_229:
                 sec
-                jsr LA351_229
+                jsr qjmi
                 php
                 txa
                 jsr L9AD4_229
@@ -6121,7 +6109,7 @@ L9DAC_229:
                 sta dosram+$01-$fc,x
                 inx
                 bne L9DAC_229
-                jsr LA458_229
+                jsr makatp
 
                 ldy #$0c
 L9DBA_229:
@@ -6887,7 +6875,7 @@ L9D15:
                 .if dfs229
 reset:
                 jsr savita
-                jsr LA5A2_229
+                jsr suspri
                 ldy #<memflg
                 lda (temp),y
                 bpl LA26A_229
