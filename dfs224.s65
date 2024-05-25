@@ -421,110 +421,34 @@ oscli=$FFF7                     ;Execute command line
 ; one of the source files in AcornDNFSv300, named after that file.
 ; Then some extras for any additions.
 
+                .dsection DOS01
+                .dsection DOS01_
+                .dsection DOS02
+                .dsection DOS02_
+                .dsection DOS03
+                .dsection DOS03_
                 .if dfs226
-
-                .dsection DOS01
-                .dsection DOS01_1
-                .dsection DOS02
-                .dsection DOS02_1
-                .dsection DOS03
-                .dsection DOS03_1
                 .dsection DOS06
-                .dsection DOS04
-                .dsection DOS05
-                .dsection DOS07
-                .dsection DOS08
-                .dsection DOS09
-                .dsection DOS10
-                .dsection DOS10_1
-                .dsection DOS10_2
-                .dsection DOS11
-                .dsection TUBE
-                .dsection SRAM
-                .dsection BPLUS
-                .dsection FASTGB
-
-                .elsif dfs225
-
-                .dsection DOS01
-                .dsection DOS01_1
-                .dsection DOS02
-                .dsection DOS02_1
-                .dsection DOS03
-                .dsection DOS03_1
-                .dsection DOS04
-                .dsection DOS05
-                .dsection DOS07
-                .dsection DOS06
-                .dsection DOS08
-                .dsection DOS09
-                .dsection DOS10
-                .dsection DOS10_1
-                .dsection DOS11
-                .dsection SRAM
-                .dsection FASTGB
-
-                .elsif dfs229
-
-                .dsection DOS01
-                .dsection DOS01_1
-                .dsection DOS02
-                .dsection DOS02_1
-                .dsection DOS03
-                .dsection DOS03_1
-                .dsection DOS04
-                .dsection DOS05
-                .dsection DOS07
-                .dsection DOS06
-                .dsection DOS08
-                .dsection DOS09
-                .dsection DOS10
-                .dsection DOS10_1
-                .dsection DOS11
-                .dsection SRAM
-                .dsection FASTGB
-                
-                .elsif dfs245
-
-                .dsection DOS01
-                .dsection DOS01_1
-                .dsection DOS02
-                .dsection DOS02_1
-                .dsection DOS03
-                .dsection DOS03_1
-                .dsection DOS04
-                .dsection DOS05
-                .dsection DOS07
-                .dsection DOS06
-                .dsection DOS08
-                .dsection DOS09
-                .dsection DOS10
-                .dsection DOS10_1
-                .dsection DOS11
-                ;.dsection SRAM
-                .dsection FASTGB
-
-                .else
-
-                .dsection DOS01
-                .dsection DOS01_1
-                .dsection DOS02
-                .dsection DOS02_1
-                .dsection DOS03
-                .dsection DOS03_1
-                .dsection DOS04
-                .dsection DOS05
-                .dsection DOS06
-                .dsection DOS07
-                .dsection DOS08
-                .dsection DOS09
-                .dsection DOS10
-                .dsection DOS10_1
-                .dsection DOS11
-                .dsection SRAM
-                .dsection FASTGB
-
                 .endif
+                .dsection DOS04
+                .dsection DOS05
+                .if !dfs226&&!dfs225&&!dfs229&&!dfs245
+                .dsection DOS06
+                .endif
+                .dsection DOS07
+                .if dfs225||dfs229||dfs245
+                .dsection DOS06
+                .endif
+                .dsection DOS08
+                .dsection DOS09
+                .dsection DOS10
+                .dsection DOS10_
+                .dsection UTILS ;2.26 only
+                .dsection DOS11
+                .dsection TUBE  ;2.26 only
+                .dsection SRAM  ;not 2.45
+                .dsection BPLUS ;2.26 only
+                .dsection FASTGB
 
                 .section DOS01
                 
@@ -1375,7 +1299,7 @@ savit:                          ;Save XY
 
                 .endsection DOS01
 
-                .section DOS01_1
+                .section DOS01_
 
 L8426:                          ;Convert binary value in A to BCD
                 jsr savit       ;save XY
@@ -1485,7 +1409,7 @@ L848C:
 L848D:
                 rts
 
-                .endsection
+                .endsection DOS01_
 
                 .section DOS02
 
@@ -2648,7 +2572,7 @@ ren5:
 
                 .endsection DOS02
 
-                .section DOS02_1
+                .section DOS02_
                 
 L8BBC:                          ;Internal OSWORD $7F handler
                 .if dfs229||dfs245
@@ -4384,7 +4308,7 @@ titset:
 titend:
                 .endif
 
-                .endsection DOS02_1
+                .endsection DOS02_
 
                 .section DOS03
                 
@@ -4591,7 +4515,7 @@ L94E9:
 
                 .endsection DOS03
 
-                .section DOS03_1
+                .section DOS03_
                 
 L94EA:                          ;Clear high OSWORD $7F control block
                 ldx #$0D
@@ -4604,7 +4528,7 @@ L94EE:
                 sta LC290+$05
                 rts
 
-                .endsection DOS03_1
+                .endsection DOS03_
 
                 .section DOS04
 
@@ -8514,7 +8438,7 @@ LA5D1:                          ;Set high word of OSFILE load address = $FFFF
 
                 .endsection DOS10
 
-                .section DOS10_1
+                .section DOS10_
                 
 verify:                         ;*VERIFY
                 lda #$00        ;clear formatting flag
@@ -9116,10 +9040,10 @@ LA9E9:                          ;Print hex nibble (via OSASCI)
                 jsr digut1      ;convert hex nibble to ASCII
                 jmp osasci      ;print via OSASCI and exit
 
-                .endsection DOS10_1
+                .endsection DOS10_
 
                 .if dfs226
-                .section DOS10_2
+                .section UTILS
 roms:
                 lda #0
                 sta linno
@@ -9465,7 +9389,7 @@ build3:
                 jsr osbput
                 jmp build1
                 
-                .endsection DOS10_2
+                .endsection UTILS
                 .endif
 
                 .section DOS11
