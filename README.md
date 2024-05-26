@@ -45,7 +45,54 @@ vs data and all relevant labels and references have been captured.
 * DFS 2.29 (patched version supplied on Master 128 welcome disk)
 * DFS 2.45 (part of MOS 3.50)
 
-# more DFS versions
+# Build
+
+## Prerequisites
+
+* Python 3.x
+
+On Unix:
+
+* [`64tass`](http://tass64.sourceforge.net/) (I use r3120)
+* GNU Make
+
+(Prebuilt Windows EXEs for 64tass and make are included in the repo.)
+
+## git clone
+
+This repo has submodules. Clone it with `--recursive`:
+
+    git clone --recursive https://github.com/tom-seddon/acorn_1770_dfs_disassembly
+	
+Alternatively, if you already cloned it non-recursively, you can do
+the following from inside the working copy:
+
+    git submodule init
+	git submodule update
+
+(The code won't build without fiddling around if you download one of
+the archive files from GitHub - a GitHub limitation. It's easiest to
+clone it as above.)
+
+## Build steps
+
+Type `make` from the root of the working copy.
+
+The build process is supposed to be silent when there are no errors.
+
+The output is 5 ROM images, as per the list above:
+
+* `build/dfs224.bin` - DFS 2.24
+* `build/dfs225.bin` - DFS 2.25
+* `build/dfs226.bin` - DFS 2.26
+* `build/dfs229.bin` - DFS 2.29
+* `build/dfs245.truncated.bin` - DFS 2.45 (incomplete - additional MOS
+  and ADFS code is not included)
+
+The repo includes original ROM images for all of the above and the
+build process checks that the build output matches.
+
+# More DFS versions
 
 List of DFS versions:
 https://mdfs.net/System/ROMs/Filing/Disk/Acorn/versions

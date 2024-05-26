@@ -1,6 +1,14 @@
+# -*- mode:makefile-gmake; -*-
+
+ifeq ($(OS),Windows_NT)
+PYTHON:=py -3
+TASS:=bin\64tass.exe
+else
 PYTHON:=/usr/bin/python3
-BEEBASM:=beebasm
 TASS:=64tass
+endif
+
+BEEBASM:=beebasm
 
 ##########################################################################
 ##########################################################################
