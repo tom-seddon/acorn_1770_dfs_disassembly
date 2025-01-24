@@ -43,6 +43,7 @@ vs data and all relevant labels and references have been captured.
 
 * DFS 2.25 (supplied on Master Compact welcome disk)
 * DFS 2.29 (patched version supplied on Master 128 welcome disk)
+* DFS 2.44 (part of [FinMOS 3.29](https://stardot.org.uk/forums/viewtopic.php?t=18510))
 * DFS 2.45 (part of MOS 3.50)
 
 # Build

@@ -53,6 +53,7 @@ SQUEEZE=false                   ;Unreachable code removed and some routines shor
 dfs225=false
 dfs226=false
 dfs229=false
+dfs244=false
 dfs245=false
                 .endweak
 
@@ -170,25 +171,25 @@ L00BF=$00BF                     ;temporary; byte written to SWRAM, error message
 strtlo=work  +$0006             ;LSB start address in OSFILE 0
 lenlo=work  +$0006              ;LSB file length in OSFILE
 freehi=work  +$0006             ;MSB free space in *FREE / *MAP
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 L00C0=work +$0006
                 .endif
 strthi=work  +$0007             ;3MSB start address in OSFILE 0
 lenhi=work  +$0007              ;2MSB file length in OSFILE
 headlo=work  +$0007             ;LSB headroom in *FREE / *MAP
 bitcnt=work  +$0007             ;bit counter in LA960
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 L00C1=work +$0007
                 .endif
 endlo=work  +$0008              ;LSB end address in OSFILE 0
 lbahi=work  +$0008              ;MSB LBA in OSFILE
 headhi=work  +$0008             ;MSB headroom in *FREE / *MAP
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 L00C2=work +$0008
                 .endif
 endhi=work  +$0009              ;3MSB end address in OSFILE 0
 lbalo=work  +$0009              ;LSB LBA in OSFILE
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 L00C3=work +$0009
                 .endif
 lenhl=work  +$000A              ;MSB file length in OSFILE
@@ -197,7 +198,7 @@ L00C4=work  +$000A              ;temp cat offset in *RENAME
 todolo=work  +$000A             ;LSB no. sectors remaining to be copied
 todohi=work  +$000B             ;MSB no. sectors remaining to be copied
 wrknam=work  +$000B             ;current filename
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 L00C5=work  +$000b
                 .endif
 srclo=work  +$000C              ;LSB LBA of next sector to copy from source
@@ -205,7 +206,7 @@ L00C6=work  +$000C              ;microcode in *FREE / *MAP
 srchi=work  +$000D              ;MSB LBA of next sector to copy from source
 userpt=work  +$000D             ;pointer to user's OSWORD control block
 dstlo=work  +$000E              ;LSB LBA of next sector to copy to destination
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 L00C8=work  +$000E
                 .endif
 dsthi=work  +$000F              ;MSB LBA of next sector to copy to destination
@@ -292,7 +293,7 @@ LC29D=mainws+$009D              ;retry counter in *FORM / *VERIFY
 LC29E=mainws+$009E              ;retry counter in OSWORD $7F
 LC29F=mainws+$009F              ;number of tracks to *FORMAT / *VERIFY
 
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
 LC2A0=mainws+$00A0
                 .endif
 
@@ -352,7 +353,7 @@ seqlma=seqmap+$0015             ;2MSB of open file's extent
 seqlha=seqmap+$0016             ;MSB of open file's extent
 seqflg=seqmap+$0017             ;channel flags b7=buffer contains PTR b6=buffer changed
                                 ;b5=EXT changed b4=EOF warning given b1..b0=drive number
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 LC318=seqmap+$0018              ;bottom 8 bits of file size??
                 .endif
 seqem=seqmap+$0019              ;LSB of number of sectors allocated to file
@@ -435,11 +436,11 @@ oscli=$FFF7                     ;Execute command line
                 .endif
                 .dsection DOS04
                 .dsection DOS05
-                .if !dfs226&&!dfs225&&!dfs229&&!dfs245
+                .if !dfs226&&!dfs225&&!dfs229&&!dfs244&&!dfs245
                 .dsection DOS06
                 .endif
                 .dsection DOS07
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 .dsection DOS06
                 .endif
                 .dsection DOS08
@@ -462,7 +463,7 @@ lang:                           ;Language entry
                                 ;Service entry
                 .if dfs226
                 jmp LBEC8_226
-                .elsif dfs245
+                .elsif dfs244||dfs245
                 jmp L9ADE
                 .else
                 jmp LAB9F
@@ -476,6 +477,8 @@ lang:                           ;Language entry
                 .char $7a       ;version No.
                 .elsif dfs229
                 .char $7e       ;version No.
+                .elsif dfs244
+                .char $94
                 .elsif dfs245
                 .char $95       ;version No.
                 .else
@@ -488,6 +491,8 @@ lang:                           ;Language entry
                 .text "2.25"    ;version string
                 .elsif dfs229
                 .text "2.29"    ;version string
+                .elsif dfs244
+                .text "2.44"
                 .elsif dfs245
                 .text "2.45"
                 .else
@@ -544,7 +549,7 @@ estrn0:
                 bmi vstrnr      ;if b7=1 then opcode terminator, execute it
                 bne estrn0      ;else if not NUL then copy more characters
                 jsr reltub      ;else raise error. ensure Tube is released
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 .if dfs225
                 bit LC2A0+$02
                 .else
@@ -564,21 +569,21 @@ vstrng:                         ;Print string immediate (via PCHR)
                 sta ptemp+$01
                 lda itemp       ;restore A on entry and save on stack
                 pha
-                .if !dfs229&&!dfs245
+                .if !dfs229&&!dfs244&&!dfs245
                 tya             ;save Y
                 pha
                 ldy #$00        ;set Y=0 for indirect indexed load
                 .endif
 vstrlp:
                 jsr tmpinc      ;increment ptemp
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda (ptemp)     ;get character from after JSR
                 .else
                 lda (ptemp),y   ;get character from after JSR
                 .endif
                 bmi vstrnx      ;if b7=1 then opcode terminator, execute it
                 jsr pchr        ;else print character
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 bra vstrlp
                 .else
                 jmp vstrlp      ;and loop
@@ -586,7 +591,7 @@ vstrlp:
 
 vstrnx:
                 pla             ;restore AY
-                .if !dfs229&&!dfs245
+                .if !dfs229&&!dfs244&&!dfs245
                 tay
                 pla
                 .endif
@@ -607,7 +612,7 @@ pchr:                           ;Print character in A (OSASCI)
                 pha
                 ora #$10        ;b4=1 disable *SPOOL output
                 jsr wriwde      ;call OSBYTE $03 = specify output stream in A
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 plx
                 .else
                 pla             ;restore previous output stream setting
@@ -789,7 +794,7 @@ isoexe:                         ;Extract b7,b6 of A
                 lsr a
                 lsr a
 isolen:                         ;Extract b5,b4 of A
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jsr sfour
                 .else
                 lsr a
@@ -929,7 +934,7 @@ L826E:
 L8271:                          ;Search for file with execute privilege
                 jsr L93AD       ;ensure catalogue loaded with execute privilege
                 lda #buffer-buffer ;compare with name in buffer
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 bra L8296
                 .else
                 beq L8296       ;always taken
@@ -949,7 +954,7 @@ lookw0:
 
 next:                           ;Find next matching file
                 ldx #buffer-buffer ;compare with name in buffer
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 bra next0
                 .else
                 beq next0       ;always taken
@@ -963,7 +968,7 @@ lookux:
                 pla
 L8296:
                 tax             ;set X = offset of comparand
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 stz vtemp+$00
                 .else
                 lda #(<catlow)-$08 ;start at first catalogue entry
@@ -1240,7 +1245,7 @@ savit:                          ;Save XY
                 .else
 savita:                         ;Save AXY
                 pha             ;stack = Rl,Rh,y,x,a,cl,ch,sl,sh
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 phx
                 phy
                 .else
@@ -1271,7 +1276,7 @@ savit2:
                 pla             ;discard y,x:
                 pla
 savrta:                         ;Restore AXY and return to superroutine
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 ply
                 plx
                 .else
@@ -1285,7 +1290,7 @@ savrta:                         ;Restore AXY and return to superroutine
 
 savit:                          ;Save XY
                 pha             ;push y,x,a
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 phx
                 phy
                 .else
@@ -1373,7 +1378,7 @@ L8461:                          ;Input number up to 3 digits
                 sec
                 beq L848D       ;if no argument then exit Z=1, C=1
                 php
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 stz etemp       ;else set total = 0
                 bra L8482       ;and branch into loop
                 .else
@@ -1689,7 +1694,7 @@ comtab:                         ;DFS command table
                 .char >(wipe  -$01),<(wipe  -$01)
                 .char $02       ;syntax $2: <afsp>
                                 ;unrecognised command, *RUN it  $8835
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 .char >(L883C_225-$01),<(L883C_225-$01)
                 .else
                 .char >(defcom-$01),<(defcom-$01)
@@ -1969,7 +1974,7 @@ blkwr:                          ;Write ordinary file L5
 L8826:
                 sta LC290+$06   ;store command in high OSWORD $7F control block:
 blkxx:                          ;Transfer ordinary file L5
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 stz xtemp
 blkxx2:
                 .endif
@@ -1980,7 +1985,7 @@ blkxx2:
                                 ;but these calls define no return value)
                 rts
 
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
 
 wnota:
                 jsr stxylp      ;set GSINIT pointer to XY, set Y=0
@@ -2022,7 +2027,7 @@ defcon:
                 jsr frmnam      ;set current file from argument pointer
                 sty linadr+$00  ;store offset of command line tail
                 jsr L8271       ;search for file in catalogue
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 bcs L888F_225
                 .else
                 bcs defsuc      ;if found then execute command binary
@@ -2034,7 +2039,7 @@ defcon:
                 jsr dodriv      ;select drive in A
                 jsr frmnm1      ;parse file spec from argument pointer
                 jsr L8271       ;search for file in catalogue
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 bcs L888F_225
                 .else
                 bcs defsuc      ;if found then execute it
@@ -2054,7 +2059,7 @@ defcon:
                 bcc L8867       ;carry out to MSB
                 iny
 L8867:
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 clc
 L888F_225:
                 rts
@@ -2179,7 +2184,7 @@ relme2:
 relme3:
                 sta (temp),y
                 iny
-                .if dfs245
+                .if dfs244||dfs245
                 ; SRAM workspace is MOS 3.50's problem
                 .else
                 cpy #sramws     ;[D]stop at SRAM workspace
@@ -2578,7 +2583,7 @@ ren5:
                 .section DOS02_
                 
 L8BBC:                          ;Internal OSWORD $7F handler
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda #1
                 sta xtemp
                 .else
@@ -2588,7 +2593,7 @@ L8BBC:                          ;Internal OSWORD $7F handler
 
 L8BBF:                          ;Internal OSWORD $7F handler w/interrupts
                 cli             ;enable IRQ handling
-                .if !dfs229&&!dfs245
+                .if !dfs229&&!dfs244&&!dfs245
                 sec             ;set carry flag to indicate this
 L8BC1:
                 ror xtemp       ;save interrupt flag state in xtemp
@@ -2612,7 +2617,7 @@ L8BD8:
                 lda L00A2       ;get final controller status
                 jsr L8C0D       ;convert WD 1770 status to i8271 result
                 sta (temp),y    ;store in caller's control block
-                .if dfs226||dfs225||dfs229||dfs245
+                .if dfs226||dfs225||dfs229||dfs244||dfs245
                 ldx L00A7
                 cpx #$80
                 bne L8C2E_226
@@ -2622,7 +2627,7 @@ L8BD8:
 L8C2E_226:
                 .endif
                 pha             ;save status for return
-                .if dfs226||dfs225||dfs229||dfs245
+                .if dfs226||dfs225||dfs229||dfs244||dfs245
                 and #$df
                 .endif
                 cmp #$18        ;$18 = sector not found
@@ -2661,7 +2666,7 @@ L8C18:
 L8C1C:                          ;Prepare for OSWORD $7F operation
                 jsr L8F04       ;claim NMI
                 jsr L8F37       ;set track stepping speed from CMOS RAM
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 stz L00A1       ;clear read/write flag
                 .else
                 lda #$00
@@ -2715,7 +2720,7 @@ L8C65:
 L8C69:
                 ror L00A1       ;set b7=Tube flag, b6=write flag
                 jsr L8F48       ;install NMI service routine
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda (temp)     ;get drive number to operate on
                 .else
                 ldy #$00        ;$00 = offset of drive parameter
@@ -2779,7 +2784,7 @@ L8C8D:
                 bcs L8C9E       ;drive 0/2
                 ldx LC288+$01   ;or drive 1/3
 L8C9E:
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 stz L00A2       ;clear result code/NMI busy flag
                 .else
                 ldy #$00
@@ -2789,7 +2794,7 @@ L8C9E:
                 bit LC287
                 bcc L8CB3       ;if drive 0 is selected
                 bpl L8CC4       ;and drive 0 uncal flag is set
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 stz LC288+$00   ;then zero head 0 position
                 .else
                 sty LC288+$00   ;then zero head 0 position
@@ -2799,7 +2804,7 @@ L8C9E:
 
 L8CB3:
                 bvc L8CC4       ;likewise for drive 1
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 stz LC288+$01
                 .else
                 sty LC288+$01
@@ -2837,7 +2842,7 @@ L8CD1:                          ;Do OSWORD $7F operation
                 bcs L8CCE       ;then execute WD 1770 command in A
                 ldy #$08        ;2nd parm, starting sector
                 lda (temp),y
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lsr xtemp       ;I don't get it??
                 bcs L8D49       ;Nope, still don't
                 .else
@@ -2858,7 +2863,7 @@ L8CF8:
                 .else
                 sbc L00A3       ;c=1; subtract number of sectors per track
                 eor #$FF        ;take two's complement
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 inc a           ;=number of sectors to end of track
                 .else
                 clc             ;can save 3 bytes (EOR #$FF:ADC L00A3)
@@ -2884,7 +2889,7 @@ L8D14:
                 cmp #$01        ;if doing no whole sectors, only partial
                 bne L8D2B       ;then no sector advance occurs
                 lda L8FA7-L8F86+intnmi+$01 ;so emulate L8FA7: ?$0D4C=?$0D22
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 ldx L8FA9-L8F86+intnmi+$01
                 sta intnmi,x
                 .else
@@ -2959,7 +2964,7 @@ emudo2:
                 ror a           ;shift carry into b7
                 sta itemp       ;store LSB = 0 or 128 bytes
                 .else
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 stz atemp
                 .else
                 lda #$00
@@ -3015,7 +3020,7 @@ L8DC5:                          ;Execute WD 1770 command
                 lda (temp),y
 
 L8DC9:                          ;Execute WD 1770 command in A
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 L8DE2_229:
                 tay             ;Y = command
                 pha             ;save command
@@ -3074,7 +3079,7 @@ L8DCB:
                 ror L00A2       ;c=1; set b7 of flag, b7=1 ISR busy
                 pla             ;restore command
                 bpl L8E29       ;if a Type I command then branch
-                .if !dfs229&&!dfs245
+                .if !dfs229&&!dfs244&&!dfs245
                 bit L00A1       ;else test write flag
                 bvc L8DE9       ;if writing to disc
                 ldy track
@@ -3094,7 +3099,7 @@ L8DE9:
                 beq L8E04       ;(read w/privilege) then command=$80
                 cmp #$87        ;else if $83 (=$5E/$5F verify data)
                 bne L8E0A
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda #L8FD6-L9053_229-$02
                 sta L9053_229-L8F86+intnmi+$01
                 .else
@@ -3122,7 +3127,7 @@ L8E1B:
                 bne L8E26
                 jsr L8E5A       ;then wait until controller idle
 L8E26:
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda L00A7
                 bmi L8E89_229
                 cmp #$20
@@ -3147,7 +3152,7 @@ L8E29:                          ;type I command
                 ldy #$01        ;execute it once
                 sty L00A5
                 ora L00A4       ;apply stepping speed bits in b1,b0
-                .if dfs226||dfs225||dfs229||dfs245
+                .if dfs226||dfs225||dfs229||dfs244||dfs245
                 sta L00A7
                 .endif
                 sta fdccmd      ;send command to FDC
@@ -3171,7 +3176,7 @@ L8E3A:
                 bpl L8E3A       ;if Escape not pressed then keep waiting
                 lda #$40        ;else $0D00 = RTI
                 sta intnmi+$00
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 stz latch       ;b2=0 put FDC in reset
                 .else
                 lda #$00        ;b2=0 put FDC in reset
@@ -3199,13 +3204,13 @@ L8E5A:                          ;Wait for controller to become idle
                 rts
 
 L8E64:                          ;$C0 Read address
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda #L8FA4-L8F8E-$02
                 .else
                 lda #L8FD8-L8F8E-$02 ;?$0D4C=$48
                 .endif
                 sta L8FD1-L8F86+intnmi+$01 ;set ISR to discard data after count read
-                .if dfs245
+                .if dfs244||dfs245
                 ldx L9053_229-L8F86+intnmi+$01
                 .else
                 ldx L8F8E-L8F86+intnmi+$01 ;hold DRQ dispatch branch operand
@@ -3213,7 +3218,7 @@ L8E64:                          ;$C0 Read address
 L8E6C:
                 sbc #$01        ;wait 180 microseconds
                 bne L8E6C
-                .if dfs245
+                .if dfs244||dfs245
                 stx L9053_229-L8F86+intnmi+$01
                 .else
                 stx L8F8E-L8F86+intnmi+$01 ;restore branch operand (=$2F?? store bytes read)
@@ -3314,7 +3319,7 @@ L8EF4:                          ;Set Tube presence flag
                 rts
 
 L8F04:                          ;Claim NMI
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 ldx #2
 L8F3B_225:
                 lda L00B0,x
@@ -3326,7 +3331,7 @@ L8F3B_225:
                 ldx #$0C        ;service call $0C = claim NMI
                 ldy #$FF        ;call OSBYTE with Y=$FF
                 jsr osbyte
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 pla
                 sta L00B0
                 pla
@@ -3389,7 +3394,7 @@ L8F37:                          ;Set track stepping speed from CMOS RAM/keyboard
                 ldx #$0B        ;$0B = ADFS start-up options, keyboard settings and floppy drive parameters
                 jsr osbyte
                 tya
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 and #$03
                 .else
                 and #$02        ;if bit 1 set
@@ -3403,7 +3408,7 @@ L8F45:
                 .endif
 
 L8F48:                          ;Install NMI service routine
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 ldx #L8FD8-L8F86-$01 ;set X=offset of last byte of routine
                 .else
                 ldx #L8FE4-L8F86-$01 ;set X=offset of last byte of routine
@@ -3413,21 +3418,21 @@ L8F4A:
                 sta intnmi,x
                 dex
                 bpl L8F4A
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 ldx #L9055_229-L8FBF ;if reading, X=11
                 .else
                 ldx #L8FC2-L8FBF ;if reading, X=3
                 .endif
                 bit L00A1       ;to paste address into STA instruction
                 bvc L8F69
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda #L8FC2+$01-L8F86
                 sta L8FD3-L8F86+intnmi+$01
                 .else
                 lda #L8FDD-L8F8E-$02 ;else set NMISR to write zeroes at end of transfer
                 sta L8FA7-L8F86+intnmi+$01
                 .endif
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda #L8F96-L8F8E-$02
                 bit xtemp
                 bmi L8FD7_229
@@ -3435,13 +3440,13 @@ L8F4A:
 L8FD7_229:
                 stz L8FA7-L8F86+intnmi+$01
                 .endif
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 ldx #L8FF2-L8FD8
                 .else
                 ldx #L8FF2-L8FE4 ;point X to last byte of write overlay
                 .endif
 L8F60:
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda L8FD8-$01,x
                 .else
                 lda L8FE4-$01,x ;replace part of NMI service routine with write overlay
@@ -3449,12 +3454,12 @@ L8F60:
                 sta L8FBF-L8F86+intnmi-$01,x
                 dex
                 bne L8F60       ;finish with X=0
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 bra L8FF4_229
                 .endif
                 
 L8F69:
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 bit xtemp
                 bvc L8FF4_229
                 ldy dcby
@@ -3473,7 +3478,7 @@ L8FF4_229:
                 rts
 
 L8F7B:                          ;transferring to Tube.
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda #$80        ;BRA
                 sta L9058_229-L8F86+intnmi+$00
                 lda #L8FCD-L9058_229-$02
@@ -3511,13 +3516,13 @@ L8F9C:                          ;advance sector
                 cmp #$01        ;if next sector is the last
                 bne L8FAC
                 lda L00A1       ;then test b0=partial sector flag
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 L8FA4:
                 .endif
                 ror a
                 bcc L8FAC       ;if set
 L8FA7:
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda #L8FA4-L8F8E-$02
                 .else
                 lda #L8FD8-L8F8E-$02 ;then discard data/write zeroes at end of byte count
@@ -3539,14 +3544,14 @@ L8FB0:
 L8FBF:                          ;data request handler
                 lda fdcdat      ;read data register
 L8FC2:
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 sta $ff00       ;if reading to host, address pasted here
                 .else
                 sta reg3        ;if reading to host, address pasted here
                 .endif
 L8FC5:
                 inc L8FC2-L8F86+intnmi+$01 ;increment low byte of host address
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 L9053_229:
                 bra L9055_229
 L9055_229:                      ;should really have called this L8FC2?? As that's what it's the equivalent of
@@ -3563,7 +3568,7 @@ L8FCD:
                 dec L00A6       ;decrement byte count
                 bne L8FD6       ;exit ISR if bytes remaining
 L8FD1:
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda #L9055_229-L9053_229-$02 ;0D4B set dispatch branch offset for next DRQs
 L8FD3:
                 sta L9053_229-L8F86+intnmi+$01 ;default: continue reading to memory
@@ -3576,7 +3581,7 @@ L8FD6:
                 rti             ;return from interrupt
 
 L8FD8:
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda reg3
                 bra L8FE7
                 .else
@@ -3586,7 +3591,7 @@ L8FD8:
                 .endif
 
 L8FDD:
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 stz fdcdat
                 .else
                 lda #$00        ;write zero to data register
@@ -3595,12 +3600,12 @@ L8FDD:
                 pla             ;restore A from main thread
                 rti             ;return from interrupt
 
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 nop
                 .endif
 
 L8FE4:                          ;Write overlay pasted to $0D39
-                .if !dfs229&&!dfs245
+                .if !dfs229&&!dfs244&&!dfs245
                 lda reg3        ;if writing to host, address pasted here / L8FBF
                 .endif
 L8FE7:
@@ -3611,7 +3616,7 @@ L8FE7:
 
 
 L8FF2:                          ;Install i8271 emulator ISR
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 ldx L9055_229-L8F86+intnmi+$01 ;extract I/O write address
                 lda L9055_229-L8F86+intnmi+$02 ;from basic ISR, X=LSB A=MSB
                 .else
@@ -3795,7 +3800,7 @@ L90D1:
 ;Table of WD 1770 commands
 L90D5:
                 .char $00,$10,$40,$50
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 .char $70
                 .endif
                 .char $80,$81,$83,$A0
@@ -3804,7 +3809,7 @@ L90D5:
 ;Table of WD 1770 status code mask values
 L90E1:
                 .char $18,$18,$18,$18
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 .char $18
                 .endif
                 .char $3F,$1F,$1F,$5F
@@ -3935,7 +3940,7 @@ L91B5:
 L91C1:
                 ldx #<work      ;point XY to modified control block
                 ldy #>work
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jsr L8BBC       ;call internal OSWORD $7F handler
                 .else
                 jsr L8BBF       ;call internal OSWORD $7F handler
@@ -4361,7 +4366,7 @@ L93C2:                          ;Transfer catalogue
                 sta LC290+$02
                 dec LC290+$03   ;set address high bytes = $FF
                 dec LC290+$04
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jsr L948A_229   ;transfer data and report errors L4
                 .else
                 jsr L93F9       ;transfer data and report errors L4
@@ -4383,7 +4388,7 @@ escape:
 L93F8:
                 rts
 
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 L948A_229:
                 stz xtemp
                 .endif
@@ -4404,7 +4409,7 @@ L9410:
                 bcs L9475
                 ldx #<LC290     ;else point XY to high OSWORD $7F control block
                 ldy #>LC290
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jsr L8BBF       ;call internal OSWORD $7F handler
                 .else
                 jsr L8BBC       ;call internal OSWORD $7F handler
@@ -4564,7 +4569,7 @@ close:
                 .endif
                 
 close2:                         ;Close all files
-                .if BUGFIX||dfs225||dfs229||dfs245
+                .if BUGFIX||dfs225||dfs229||dfs244||dfs245
                 lda #$77        ;call OSBYTE $77 = close *SPOOL/*EXEC files
                 jsr osbyte
                 .else
@@ -4921,7 +4926,7 @@ wargs:                          ;OSARGS
                 .endif
                 cmp #$01        ;else compare A - 1
                 bne vradr       ;if A=0 or A=2 then return PTR or EXT
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jsr dcrych
                 jmp vstara
                 .else
@@ -4971,9 +4976,9 @@ vradr:                          ;OSARGS A=0/2, Y>0 return PTR/EXT
                 
 L97A9:                          ;OSARGS A=3, Y>0 set EXT
                 jsr dcrych      ;ensure file handle valid and open
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 jsr vbput1
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda #$20
                 jsr setbit
                 ldy dcby
@@ -5020,7 +5025,7 @@ L982D_225:
                 ldx #$fd        ;-4
 L9831_225:
                 lda seqpl,y
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 sta LC2A0+$04-$fd,x
                 .else
                 sta LC2A0-$fd,x
@@ -5034,13 +5039,13 @@ L9831_225:
 L9840_225:
                 ldy dcby
                 phy
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 ldx #$fd
                 .else
                 ldx #$7d        ;-4
                 .endif
 L9846_225:
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 lda LC2A0+$04-$fd,x
                 .else
                 lda LC2A0-$7d,x
@@ -5048,7 +5053,7 @@ L9846_225:
                 sta seqpl,y
                 iny
                 inx
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 bne L9846_225
                 dex
                 stx LC2A0+$06
@@ -5056,7 +5061,7 @@ L9846_225:
                 bpl L9846_225
                 .endif
                 ply
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jmp L9C29_229
                 .else
                 jsr vstarc
@@ -5133,7 +5138,7 @@ args3x:
 
                 .endif
 
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 ; Could this be merged in with any of the code above??
 L988F_229:
                 lda 0,x
@@ -5249,7 +5254,7 @@ wfeof:                          ;FSC  1 = read EOF state
                 txa             ;transfer file handle to Y
                 tay
                 jsr dcrych      ;ensure file handle valid and open
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jsr pcmp_229
                 .else
                 tya             ;a=y = channel workspace pointer
@@ -5287,7 +5292,7 @@ illeof:                         ;Raise "EOF" error
 wbget:                          ;OSBGET
                 jsr savit       ;save XY
                 jsr dcrych      ;ensure file handle valid and open
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jsr pcmp_229
                 .else
                 tya             ;a=y = channel workspace pointer
@@ -5349,7 +5354,7 @@ vbgetx:
                 pla             ;return byte in A, set N and Z to match
                 rts
 
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 ;L99A5_229:
 setda:
                 jsr L9EBD_229
@@ -5358,7 +5363,7 @@ setda:
                 sta seqdal,y
                 .endif
 
-                .if !dfs229&&!dfs245
+                .if !dfs229&&!dfs244&&!dfs245
 setda:                          ;Set buffer sector address from PTR
                 clc
                 lda seqloc,y    ;get LSB start sector of open file
@@ -5397,7 +5402,7 @@ xblock:                         ;Read/write sector buffer L6
                 .endif
                 inc seqsem      ;set *SPOOL/*EXEC critical flag (now $00)
                 ldy dcby        ;put channel workspace pointer in Y
-                .if !dfs229&&!dfs245
+                .if !dfs229&&!dfs244&&!dfs245
                 lda seqbuf,y    ;get MSB address of buffer in shared wksp
                 sta lodhi
                 lda #$FF        ;set high word of buffer address = $FFFF
@@ -5409,7 +5414,7 @@ xblock:                         ;Read/write sector buffer L6
                 .endif
                 lda #$01        ;256 bytes to transfer
                 sta lenhi
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jsr L9C64_229
                 .endif
                 .if SQUEEZE
@@ -5417,7 +5422,7 @@ xblock:                         ;Read/write sector buffer L6
                 plp             ;redundant
                 .endif
                 bcs xblrd       ;if C was 1 on entry then read buffer
-                .if !dfs229&&!dfs245
+                .if !dfs229&&!dfs244&&!dfs245
                 lda seqdal,y    ;else copy channel's sector buffer address
                 sta lbalo       ;to OSFILE control block (big-endian)
                 .endif
@@ -5438,11 +5443,11 @@ xblfin:
 bflx:
                 rts
 
-.if dfs229||dfs245
+.if dfs229||dfs244||dfs245
 wbptr:
 .endif
 vbput1:
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 lda seqrdo,y    ;test channel read-only bit
                 bmi vbput2      ;if b7=1 then raise "Read only"
                 lda seqlok,y    ;test file locked bit
@@ -5465,7 +5470,7 @@ wbput:                          ;OSBPUT
                 jsr dcrych      ;ensure file handle valid and open
 wbput1:
                 pha             ;save byte to write
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 jsr vbput1      ;perform read only/locked checks
                 .else
                 lda seqrdo,y    ;test channel read-only bit
@@ -5498,7 +5503,7 @@ wbput1:
                 sty atemp       ;redundant (vestigial in DFS 1.20)
                 .endif
                 sty dcby        ;else save workspace pointer
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 L9A56_229:
                 .endif
                 jsr hmtspe      ;close *SPOOL/*EXEC file on error
@@ -5534,7 +5539,7 @@ vokspl:
                 jsr dirout      ;write volume catalogue
                 ldy dcby        ;put channel workspace pointer in Y
 notful:                         ;write byte to file
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jsr L9C4B_229
                 .else
                 lda seqflg,y    ;test channel flags
@@ -5561,7 +5566,7 @@ vbputb:
                 ldy #$00        ;set Y=0 for indirect indexed store
                 sta (work),y    ;put byte in channel buffer at old PTR
                 ldy dcby        ;put channel workspace pointer in Y
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jmp L9E58_229
 
                 .else
@@ -5655,7 +5660,7 @@ vstarc:                         ;Update buffer-contains-PTR channel flag
                 jmp setcbf      ;then set buffer-contains-PTR channel flag.
                 .endif
 
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 pcmp_229:
                 tya
                 .endif
@@ -5672,7 +5677,7 @@ pcmp:                           ;Compare PTR - EXT (A=Y), - allocation (A=Y+4)
 pcmpx:
                 rts
 
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 vstara:
                 ldy #$fc
 L9AC9_229:
@@ -6266,7 +6271,7 @@ L9EBD_229:
                 
                 .endif
 
-                .if !dfs229&&!dfs245
+                .if !dfs229&&!dfs244&&!dfs245
 scmp:                           ;Compare EXT - OSARGS parameter
                 lda seqlla,y    ;return C=1 iff EXT >= parameter
                 cmp $00,x
@@ -6314,7 +6319,7 @@ L9AE8:
                 beq inifsy      ;if =$12 then initialise FS in Y
                 cmp #$0B        ;else if in range $00..$0A
                 bcc L9AFA       ;then call handler from jump table
-                .if BUGFIX||dfs229||dfs245
+                .if BUGFIX||dfs229||dfs244||dfs245
                 cmp #$28        ;else if >=$28
                 .elsif dfs225
                 cmp #$27        ;else if >=$27
@@ -6359,10 +6364,10 @@ L9B0F:
                 .word return-$01 ;Svc $23 = report top priv wksp $8626
                 .word L9D28 -$01 ;Svc $24 = abs wksp HAZEL count $9D28
                 .word L9D2B -$01 ;Svc $25 = retn filing sys info $9D2B
-                .if BUGFIX||dfs225||dfs229||dfs245
+                .if BUGFIX||dfs225||dfs229||dfs244||dfs245
                 .word shut  -$01 ;Svc $26 = *SHUT
                 .endif
-                .if BUGFIX||dfs229||dfs245
+                .if BUGFIX||dfs229||dfs244||dfs245
                 .word reset -$01 ;Svc $27 = reset occurred
                 .endif
 L9B0F_end:
@@ -6411,7 +6416,7 @@ L9B70:
                 pha             ;save cold start flag
                 lda #$06        ;FSC  6 = new filing system starting up
                 jsr osfscm      ;issue Filing System call
-                .if !dfs225&&!dfs229&&!dfs245
+                .if !dfs225&&!dfs229&&!dfs244&&!dfs245
                 lda fdcdat
                 .endif
                 ldx #$0D        ;7 vectors to replace:
@@ -6513,7 +6518,7 @@ L9C16:
                 sty seqsem      ;*SPOOL and *EXEC files are non-critical
                 .if dfs225
                 sty LC2A0+$02
-                .elsif dfs229||dfs245
+                .elsif dfs229||dfs244||dfs245
                 sty LC2A0+$06
                 .endif
 bootit:
@@ -6592,7 +6597,7 @@ L969E_226:
 
 savpri:                         ;Service call $02 = reserve private workspace
                 lda priptr,x    ;space ends at $DC00, highest valid alloc = $DA (if 2 pages) or $DB (if 1 page)
-                .if dfs245
+                .if dfs244||dfs245
                 cmp #$DC        ;if we got our one page in HAZEL
                 .else
                 cmp #$DB        ;if we got our two pages in HAZEL
@@ -6609,7 +6614,7 @@ L9C66:
                 phy             ;65C02 instruction
                 sta temp+$01    ;set up pointer to private page
                 .endif
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 stz temp+$00
                 .else
                 lda #$00
@@ -6659,7 +6664,7 @@ nmos1:
                 ply             ;65C02 instruction
                 bit priptr,x    ;65C02 instruction
                 bmi L9C96       ;if private page in main memory
-                .if dfs245
+                .if dfs244||dfs245
                 iny             ;claim one page of main memory
                 .else
                 iny             ;then claim two pages of main memory
@@ -6796,7 +6801,7 @@ unkwrd:                         ;Service call $08 = unrecognised OSWORD
                 bmi unkswz      ;if >=$80 then put call number back, pass call on
                 cpy #$7D        ;else if less than $7D
                 bcc unkswz      ;then pass call on to lower ROMs
-                .if dfs245
+                .if dfs244||dfs245
                 tax
                 jsr suspri
                 ldy #memflg
@@ -6862,7 +6867,7 @@ L9D15:
                 sta (userpt),y  ;clear MSB volume size
                 rts
 
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 reset:
                 jsr savita
                 jsr suspri
@@ -6888,7 +6893,7 @@ L9D1F:                          ;Service call $22 = reserve priv wksp in HAZEL
                 tya             ;[BUG]Y may be too high OR too low at this point
                 sta priptr,x    ;set private page pointer to Y anyway
                 lda #$22        ;restore call number
-                .if dfs245
+                .if dfs244||dfs245
                 iny             ;claim one page of HAZEL
                 .else
                 iny             ;claim two pages of HAZEL
@@ -6926,16 +6931,16 @@ L9D3B:
 L9D51:
                 .endif
 
-                .if BUGFIX||dfs225||dfs229||dfs245
+                .if BUGFIX||dfs225||dfs229||dfs244||dfs245
 shut:                           ;Service call $26 = *SHUT command issued
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 phy
                 .else
                 tya             ;ported from DFS 2.29
                 pha             ;save parameter
                 .endif
                 jsr suspri      ;set up pointer to private page
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 ldx dcbmap
                 .endif
                 ldy #memflg     ;test shared workspace possession flag
@@ -6951,7 +6956,7 @@ shut1:
                 ldy #$00        ;y=$00 close all files
                 jsr wshut       ;close a file/all files
 shut2:
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 ply
                 .else
                 pla             ;restore service call parameter
@@ -6961,7 +6966,7 @@ shut2:
                 lda #$26        ;restore service call number
                 rts             ;and pass service call on.
 
-                .if !dfs225&&!dfs229&&!dfs245
+                .if !dfs225&&!dfs229&&!dfs244&&!dfs245
 reset:                          ;Service call $26 = reset occurred
                 jsr savita      ;save AXY
                 jsr suspri      ;set up pointer to private page
@@ -7062,7 +7067,7 @@ upgbpb:
                 .endif
                 jsr wbrest      ;execute OSGBPB call
                 php
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jsr L9E8C_229
                 .else
                 bit tumflg      ;[D]if Tube present
@@ -7094,7 +7099,7 @@ wbgpb0:
                 sta dosram,y    ;to workspace
                 dey             ;loop until 13 bytes copied
                 bpl wbgpb0
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 jsr L9E30_229
                 .else
                 lda dosram+$03  ;and high bytes of address
@@ -7118,19 +7123,19 @@ wbgpb9:
                 bcs wbgpbb      ;if reading/writing data then transfer it
                 .endif
                 plp             ;else C=microcode b0 (=0), pop off stack
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 bcs LA354_229
                 plp
                 .endif
 qjmi:
                 jmp (qtemp)     ;and jump to action address.
 
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
 LA354_229:
                 jmp L9C8B_229
                 .endif
 
-                .if !dfs229&&!dfs245
+                .if !dfs229&&!dfs244&&!dfs245
 wbgpbb:
                 ldx #$03        ;4 bytes to copy, 3..0:
 wbgpb8:
@@ -7335,7 +7340,7 @@ wbgtr0:
 
 wowrit:                         ;Write binary 1 to user memory
                 lda #$01
-                .if !dfs229&&!dfs245
+                .if !dfs229&&!dfs244&&!dfs245
                 bne wbwrit
 
                                 ;OSGBPB 3 = set pointer and read data
@@ -7359,7 +7364,7 @@ wbwri0:
                 jmp adrinc      ;can save 3 bytes (join)
                 .endif
 
-                .if !dfs229&&!dfs245
+                .if !dfs229&&!dfs244&&!dfs245
                                 ;OSGBPB 1 = set pointer and write data
                                 ;OSGBPB 2 = write data
 wbptr:
@@ -7658,7 +7663,7 @@ fscltb:
                 .if !dfs226
                 .char <(ex    -$01) ;FSC  9 = *EX                   $8238
                 .char <(info  -$01) ;FSC 10 = *INFO                 $8257
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 .char <(nobin -$01) ;FSC 11 = *RUN from library     $8832
                 .else
                 .char <(wnota -$01) ;FSC 11 = *RUN from library     $8832
@@ -7679,7 +7684,7 @@ fschtb:
                 .if !dfs226
                 .char >(ex    -$01)
                 .char >(info  -$01)
-                .if dfs225||dfs229||dfs245
+                .if dfs225||dfs229||dfs244||dfs245
                 .char >(nobin -$01)
                 .else
                 .char >(wnota -$01)
@@ -7784,6 +7789,8 @@ help1:
                 .text "DFS 2.25"
                 .elsif dfs229
                 .text "DFS 2.29"
+                .elsif dfs244
+                .text "DFS 2.44"
                 .elsif dfs245
                 .text "DFS 2.45"
                 .else
@@ -8051,7 +8058,7 @@ get2dr:                         ;Parse and print source and dest. volumes
                 jsr chksyn      ;call GSINIT with C=0 and reject empty arg
                 jsr getdrv      ;parse volume spec
                 sta tdriv       ;store destination volume
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 phy             ;save GSINIT offset
                 stz L00A9       ;$00 = source and dest. are different drives
                 .else
@@ -8106,7 +8113,7 @@ chkdsf:                         ;Select source volume
                 bit L00A9       ;if source and dest. are different drives
                 bpl chkds1      ;then return
                 lda #$00        ;else A=$00 = we want source disc
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 bra chkds0
                 .else
                 beq chkds0      ;branch (always)
@@ -8334,7 +8341,7 @@ swpfc0:
                 rts
 
 mvdkda:                         ;Copy source drive/file to destination
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 stz lodlo       ;set LSB load address = 0
                 stz lenlo       ;set LSB transfer size = 0
                 .else
@@ -8351,7 +8358,7 @@ mvdkda:                         ;Copy source drive/file to destination
                 jmp regen       ;then create entry while control block pristine
 
                 .else
-                .if dfs229||dfs245
+                .if dfs229||dfs244||dfs245
                 bra cpyfl8      ;branch to avoid transferring nothing (removable??)
                 .else
                 beq cpyfl8      ;branch to avoid transferring nothing (removable??)
@@ -10112,7 +10119,7 @@ tu_begina:
                 .endsection
                 .endif
 
-                .if !dfs245
+                .if !dfs244&&!dfs245
                 .section SRAM
 ;Start of SRAM 1.04
 
@@ -13290,7 +13297,7 @@ cmdtbl:
                 .if dfs226||dfs225||dfs229
 ; Padding
                 .fill $c000-*,$ff
-                .elsif dfs245
+                .elsif dfs244||dfs245
 ; Generate shorter padding, for comparison with the DFS part of the
 ; ROM (which for MOS 3.50 also contains MOS and ADFS code).
                 .fill $af00-*,$ff
