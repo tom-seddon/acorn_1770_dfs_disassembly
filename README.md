@@ -82,12 +82,15 @@ Type `make` from the root of the working copy.
 
 The build process is supposed to be silent when there are no errors.
 
-The output is 5 ROM images, as per the list above:
+The output is 7 ROM images, as per the list above:
 
 * `build/dfs224.bin` - DFS 2.24
 * `build/dfs225.bin` - DFS 2.25
 * `build/dfs226.bin` - DFS 2.26
 * `build/dfs229.bin` - DFS 2.29
+* `build/dfs242.bin` - DFS 2.42
+* `build/dfs244.truncated.bin` - DFS 2.44 (incomplete - additional MOS
+  and ADFS code is not included)
 * `build/dfs245.truncated.bin` - DFS 2.45 (incomplete - additional MOS
   and ADFS code is not included)
 
