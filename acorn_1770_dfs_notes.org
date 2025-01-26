@@ -7,6 +7,10 @@ https://tobylobster.github.io/rom_library/
 
 ** DFS 2.45 rev 1191
 
+https://www.stardot.org.uk/forums/viewtopic.php?t=19103
+
+
+
 * DFS 2.42
 
 ** Acorn DFS v2.42 + View vB3.0.rom
