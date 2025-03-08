@@ -59,11 +59,6 @@ dfs244=false
 dfs245=false
                 .endweak
 
-                ; bodge region...
-                .if dfs228
-;L9840_225=$984a
-                .endif
-                
 ;Bugs fixed by _BUGFIX:
 ;- LIBFS executable searches terminate (2.25)
 ;- OSWORD $7F drive parameter bit 3 enables double density

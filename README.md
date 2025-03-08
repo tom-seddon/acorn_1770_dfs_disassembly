@@ -42,6 +42,8 @@ versions are a lot scrappier, but hopefully code vs data and all
 relevant labels and references have been captured.
 
 * DFS 2.25 (supplied on Master Compact welcome disk)
+* DFS 2.28 (don't know where this came from! - but it's widely
+  available and looks like an official build)
 * DFS 2.29 (patched version supplied on Master 128 welcome disk)
 * DFS 2.42 (supplied on the Olivetti PC 128 S Welcome disk)
 * DFS 2.44 (part of [FinMOS 3.29](https://stardot.org.uk/forums/viewtopic.php?t=18510))
@@ -82,11 +84,12 @@ Type `make` from the root of the working copy.
 
 The build process is supposed to be silent when there are no errors.
 
-The output is 7 ROM images, as per the list above:
+The output is 8 ROM images, as per the list above:
 
 * `build/dfs224.bin` - DFS 2.24
 * `build/dfs225.bin` - DFS 2.25
 * `build/dfs226.bin` - DFS 2.26
+* `build/dfs228.bin` - DFS 2.28
 * `build/dfs229.bin` - DFS 2.29
 * `build/dfs242.bin` - DFS 2.42
 * `build/dfs244.truncated.bin` - DFS 2.44 (incomplete - additional MOS
