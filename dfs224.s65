@@ -1,9 +1,3 @@
-                .if dfs220_master
-LB448_220_master=$b448
-LB450_220_master=$b450
-LB1D1_220_master=$b1d1
-LB477=$ffff
-                .endif
 ; automatically converted from: dfs224.asm.txt
 ;Disassembly of Acorn DFS 2.24
 ;Greg Cook, 20 May 2024
@@ -10457,9 +10451,9 @@ LAC7E:                          ;*HELP with keyword
 
                 tax
                 bne LAC67
-                jsr LB448_220_master
+                jsr LB46F
                 lda #$d
-                jsr LB450_220_master
+                jsr LB479
                 bcs LAC67
                 
                 .elsif dfs225||dfs226||dfs228||dfs229
@@ -11149,8 +11143,8 @@ LAFD7:                          ;Close SWRAM image file
                 tay             ; Y=file handle
                 lda #0          ; OSFIND $00 = close file
                 jsr osfind
-                jsr LB1D1_220_master
-                ldy #sramfh     ; 
+                jsr LB1FB       ;set up pointer to private page
+                ldy #sramfh     
                 lda #0          ; A=$00 no SWRAM image file open
                 sta (L00B8),y   ; store value in SRAM workspace
                 .else
