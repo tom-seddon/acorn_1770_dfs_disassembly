@@ -41,7 +41,8 @@ build: _folders
 	$(_V)$(TASS) $(TASSARGS) "dfs224.s65" -Ddfs242=true -o "$(BUILD)/dfs242.bin" "-L$(BUILD)/dfs242.lst"
 	$(_V)$(TASS) $(TASSARGS) "dfs224.s65" -Ddfs244=true -o "$(BUILD)/dfs244.truncated.bin" "-L$(BUILD)/dfs244.truncated.lst"
 	$(_V)$(TASS) $(TASSARGS) "dfs224.s65" -Ddfs245=true -o "$(BUILD)/dfs245.truncated.bin" "-L$(BUILD)/dfs245.truncated.lst"
-	$(_V)$(PYTHON) "bin/romdiffs.py" -a "$(BUILD)" -b "orig" "dfs224.bin" "dfs225.bin" "dfs226.bin" "dfs228.bin" "dfs229.bin" "dfs242.bin" "dfs244.truncated.bin" "dfs245.truncated.bin"
+	$(_V)$(TASS) $(TASSARGS) "dfs224.s65" -Ddfs220_master=true -o "$(BUILD)/dfs220-master.bin" "-L$(BUILD)/dfs220-master.lst"
+	$(_V)$(PYTHON) "bin/romdiffs.py" -a "$(BUILD)" -b "orig" "dfs224.bin" "dfs225.bin" "dfs226.bin" "dfs228.bin" "dfs229.bin" "dfs242.bin" "dfs244.truncated.bin" "dfs245.truncated.bin" "dfs220-master.bin"
 
 ##########################################################################
 ##########################################################################
