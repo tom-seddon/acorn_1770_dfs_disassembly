@@ -43,7 +43,8 @@ relevant labels and references have been captured.
 
 * DFS 2.20 (found in [a Master
   128](https://www.stardot.org.uk/forums/viewtopic.php?p=463981#p463981))
-* DFS 2.25 (supplied on Master Compact welcome disk)
+* DFS 2.25+SRAM 1.05 (https://stardot.org.uk/forums/viewtopic.php?p=488895#p488895)
+* DFS 2.25+SRAM 1.06 (supplied on Master Compact welcome disk)
 * DFS 2.28 (don't know where this came from! - but it's widely
   available and looks like an official build)
 * DFS 2.29 (patched version supplied on Master 128 welcome disk)
@@ -74,7 +75,7 @@ Alternatively, if you already cloned it non-recursively, you can do
 the following from inside the working copy:
 
     git submodule init
-	git submodule update
+    git submodule update
 
 (The code won't build without fiddling around if you download one of
 the archive files from GitHub - a GitHub limitation. It's easiest to
@@ -86,11 +87,12 @@ Type `make` from the root of the working copy.
 
 The build process is supposed to be silent when there are no errors.
 
-The output is 9 ROM images, as per the list above:
+The output is 10 ROM images, as per the list above:
 
 * `build/dfs220.bin` - DFS 2.20 (Master)
 * `build/dfs224.bin` - DFS 2.24
-* `build/dfs225.bin` - DFS 2.25
+* `build/dfs225.bin` - DFS 2.25/SRAM 1.06
+* `build/dfs225_2.bin` - DFS 2.25/SRAM 1.05
 * `build/dfs226.bin` - DFS 2.26
 * `build/dfs228.bin` - DFS 2.28
 * `build/dfs229.bin` - DFS 2.29

@@ -52,6 +52,7 @@ SQUEEZE=false                   ;Unreachable code removed and some routines shor
                 .weak
 dfs220_master=false
 dfs225=false
+dfs225_2=false
 dfs226=false
 dfs228=false
 dfs229=false
@@ -296,7 +297,7 @@ LC29D=mainws+$009D              ;retry counter in *FORM / *VERIFY
 LC29E=mainws+$009E              ;retry counter in OSWORD $7F
 LC29F=mainws+$009F              ;number of tracks to *FORMAT / *VERIFY
 
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
 LC2A0=mainws+$00A0
                 .endif
 
@@ -439,11 +440,11 @@ oscli=$FFF7                     ;Execute command line
                 .endif
                 .dsection DOS04
                 .dsection DOS05
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229&&!dfs242&&!dfs244&&!dfs245
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229&&!dfs242&&!dfs244&&!dfs245
                 .dsection DOS06
                 .endif
                 .dsection DOS07
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 .dsection DOS06
                 .endif
                 .dsection DOS08
@@ -476,7 +477,7 @@ lang:                           ;Language entry
                 .char copyr-lang ;copyright offset pointer
                 .if dfs226
                 .char $7b       ;version No.
-                .elsif dfs225
+                .elsif dfs225||dfs225_2
                 .char $7a       ;version No.
                 .elsif dfs228
                 .char $7d
@@ -496,7 +497,7 @@ lang:                           ;Language entry
                 .text "DFS",$00 ;title and terminator byte
                 .if dfs226
                 .text "2.26"    ;version string
-                .elsif dfs225
+                .elsif dfs225||dfs225_2
                 .text "2.25"    ;version string
                 .elsif dfs228
                 .text "2.28"
@@ -564,8 +565,8 @@ estrn0:
                 bmi vstrnr      ;if b7=1 then opcode terminator, execute it
                 bne estrn0      ;else if not NUL then copy more characters
                 jsr reltub      ;else raise error. ensure Tube is released
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
-                .if dfs225
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2
                 bit LC2A0+$02
                 .else
                 bit LC2A0+$06
@@ -1709,7 +1710,7 @@ comtab:                         ;DFS command table
                 .char >(wipe  -$01),<(wipe  -$01)
                 .char $02       ;syntax $2: <afsp>
                                 ;unrecognised command, *RUN it  $8835
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 .char >(L883C_225-$01),<(L883C_225-$01)
                 .else
                 .char >(defcom-$01),<(defcom-$01)
@@ -2004,7 +2005,7 @@ blkxx2:
                 rts
                 .endif
                 
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
 
 wnota:
                 jsr stxylp      ;set GSINIT pointer to XY, set Y=0
@@ -2047,7 +2048,7 @@ defcon:
                 jsr frmnam      ;set current file from argument pointer
                 sty linadr+$00  ;store offset of command line tail
                 jsr L8271       ;search for file in catalogue
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 bcs L888F_225
                 .else
                 bcs defsuc      ;if found then execute command binary
@@ -2059,7 +2060,7 @@ defcon:
                 jsr dodriv      ;select drive in A
                 jsr frmnm1      ;parse file spec from argument pointer
                 jsr L8271       ;search for file in catalogue
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 bcs L888F_225
                 .else
                 bcs defsuc      ;if found then execute it
@@ -2079,7 +2080,7 @@ defcon:
                 bcc L8867       ;carry out to MSB
                 iny
 L8867:
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 clc
 L888F_225:
                 rts
@@ -2637,7 +2638,7 @@ L8BD8:
                 lda L00A2       ;get final controller status
                 jsr L8C0D       ;convert WD 1770 status to i8271 result
                 sta (temp),y    ;store in caller's control block
-                .if dfs225||dfs226||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs242||dfs244||dfs245
                 ldx L00A7
                 cpx #$80
                 bne L8C2E_226
@@ -2647,7 +2648,7 @@ L8BD8:
 L8C2E_226:
                 .endif
                 pha             ;save status for return
-                .if dfs225||dfs226||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs242||dfs244||dfs245
                 and #$df
                 .endif
                 cmp #$18        ;$18 = sector not found
@@ -3176,7 +3177,7 @@ L8E29:                          ;type I command
                 ldy #$01        ;execute it once
                 sty L00A5
                 ora L00A4       ;apply stepping speed bits in b1,b0
-                .if dfs225||dfs226||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs242||dfs244||dfs245
                 sta L00A7
                 .endif
                 sta fdccmd      ;send command to FDC
@@ -3343,7 +3344,7 @@ L8EF4:                          ;Set Tube presence flag
                 rts
 
 L8F04:                          ;Claim NMI
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 ldx #2
 L8F3B_225:
                 lda L00B0,x
@@ -3355,7 +3356,7 @@ L8F3B_225:
                 ldx #$0C        ;service call $0C = claim NMI
                 ldy #$FF        ;call OSBYTE with Y=$FF
                 jsr osbyte
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 pla
                 sta L00B0
                 pla
@@ -4593,7 +4594,7 @@ close:
                 .endif
                 
 close2:                         ;Close all files
-                .if BUGFIX||dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if BUGFIX||dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 lda #$77        ;call OSBYTE $77 = close *SPOOL/*EXEC files
                 jsr osbyte
                 .else
@@ -5000,7 +5001,7 @@ vradr:                          ;OSARGS A=0/2, Y>0 return PTR/EXT
                 
 L97A9:                          ;OSARGS A=3, Y>0 set EXT
                 jsr dcrych      ;ensure file handle valid and open
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 jsr vbput1
                 .if dfs228||dfs229||dfs242||dfs244||dfs245
                 lda #$20
@@ -5471,7 +5472,7 @@ bflx:
 wbptr:
 .endif
 vbput1:
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 lda seqrdo,y    ;test channel read-only bit
                 bmi vbput2      ;if b7=1 then raise "Read only"
                 lda seqlok,y    ;test file locked bit
@@ -5494,7 +5495,7 @@ wbput:                          ;OSBPUT
                 jsr dcrych      ;ensure file handle valid and open
 wbput1:
                 pha             ;save byte to write
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 jsr vbput1      ;perform read only/locked checks
                 .else
                 lda seqrdo,y    ;test channel read-only bit
@@ -6349,7 +6350,7 @@ L9AE8:
                 bcc L9AFA       ;then call handler from jump table
                 .if BUGFIX||dfs228||dfs229||dfs242||dfs244||dfs245
                 cmp #$28        ;else if >=$28
-                .elsif dfs225
+                .elsif dfs225||dfs225_2
                 cmp #$27        ;else if >=$27
                 .else
                 cmp #$26        ;else if >=$26
@@ -6392,7 +6393,7 @@ L9B0F:
                 .word return-$01 ;Svc $23 = report top priv wksp $8626
                 .word L9D28 -$01 ;Svc $24 = abs wksp HAZEL count $9D28
                 .word L9D2B -$01 ;Svc $25 = retn filing sys info $9D2B
-                .if BUGFIX||dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if BUGFIX||dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 .word shut  -$01 ;Svc $26 = *SHUT
                 .endif
                 .if BUGFIX||dfs228||dfs229||dfs242||dfs244||dfs245
@@ -6444,7 +6445,7 @@ L9B70:
                 pha             ;save cold start flag
                 lda #$06        ;FSC  6 = new filing system starting up
                 jsr osfscm      ;issue Filing System call
-                .if !dfs225&&!dfs228&&!dfs229&&!dfs242&&!dfs244&&!dfs245&&!dfs220_master
+                .if !dfs225&&!dfs225_2&&!dfs228&&!dfs229&&!dfs242&&!dfs244&&!dfs245&&!dfs220_master
                 lda fdcdat
                 .endif
                 ldx #$0D        ;7 vectors to replace:
@@ -6544,7 +6545,7 @@ L9C16:
                 sty enaflg      ;*commands are not *ENABLEd
                 sty monflg      ;*OPT 1,0 quiet operation
                 sty seqsem      ;*SPOOL and *EXEC files are non-critical
-                .if dfs225
+                .if dfs225||dfs225_2
                 sty LC2A0+$02
                 .elsif dfs228||dfs229||dfs242||dfs244||dfs245
                 sty LC2A0+$06
@@ -6959,16 +6960,16 @@ L9D3B:
 L9D51:
                 .endif
 
-                .if BUGFIX||dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if BUGFIX||dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
 shut:                           ;Service call $26 = *SHUT command issued
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 phy
                 .else
                 tya             ;ported from DFS 2.29
                 pha             ;save parameter
                 .endif
                 jsr suspri      ;set up pointer to private page
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 ldx dcbmap
                 .endif
                 ldy #memflg     ;test shared workspace possession flag
@@ -6984,7 +6985,7 @@ shut1:
                 ldy #$00        ;y=$00 close all files
                 jsr wshut       ;close a file/all files
 shut2:
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 ply
                 .else
                 pla             ;restore service call parameter
@@ -6994,7 +6995,7 @@ shut2:
                 lda #$26        ;restore service call number
                 rts             ;and pass service call on.
 
-                .if !dfs225&&!dfs228&&!dfs229&&!dfs242&&!dfs244&&!dfs245
+                .if !dfs225&&!dfs225_2&&!dfs228&&!dfs229&&!dfs242&&!dfs244&&!dfs245
 reset:                          ;Service call $26 = reset occurred
                 jsr savita      ;save AXY
                 jsr suspri      ;set up pointer to private page
@@ -7691,7 +7692,7 @@ fscltb:
                 .if !dfs226
                 .char <(ex    -$01) ;FSC  9 = *EX                   $8238
                 .char <(info  -$01) ;FSC 10 = *INFO                 $8257
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 .char <(nobin -$01) ;FSC 11 = *RUN from library     $8832
                 .else
                 .char <(wnota -$01) ;FSC 11 = *RUN from library     $8832
@@ -7712,7 +7713,7 @@ fschtb:
                 .if !dfs226
                 .char >(ex    -$01)
                 .char >(info  -$01)
-                .if dfs225||dfs228||dfs229||dfs242||dfs244||dfs245
+                .if dfs225||dfs225_2||dfs228||dfs229||dfs242||dfs244||dfs245
                 .char >(nobin -$01)
                 .else
                 .char >(wnota -$01)
@@ -7813,7 +7814,7 @@ help1:
                 .char $0D
                 .if dfs226
                 .text "DFS 2.26"
-                .elsif dfs225
+                .elsif dfs225||dfs225_2
                 .text "DFS 2.25"
                 .elsif dfs228
                 .text "DFS 2.28"
@@ -10159,7 +10160,7 @@ tu_begina:
 
 LAA64:                          ;Text of *HELP SRAM
                 .text $0A
-                .if dfs226
+                .if dfs226||dfs225_2
                 .text "SRAM 1.05",13,10
                 .elsif dfs225||dfs228||dfs229
                 .text "SRAM 1.06",13,10
@@ -10239,7 +10240,7 @@ LAA64:                          ;Text of *HELP SRAM
                 .text "End addresses may be replaced by +<length>",$0D,$0A
                 .if dfs220_master
                 .byte $0a
-                .elsif dfs225||dfs226||dfs228||dfs229
+                .elsif dfs225||dfs225_2||dfs226||dfs228||dfs229
                 .byte 0
                 .endif
 
@@ -10335,7 +10336,7 @@ LAC15:
                 bne LAC32
                 jsr LB3C5       ;Service call $04 = unrecognised OSCLI
                 bcs LABF7       ;scan for keyword in table
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 cpx #4
                 beq LABF7
                 jsr LB234_226
@@ -10430,7 +10431,7 @@ LAC6A:                          ;*HELP listing for SRAM
                 .text $0a
                 .if dfs225||dfs228||dfs229
                 .text "SRAM 1.06"
-                .elsif dfs226
+                .elsif dfs226||dfs225_2
                 .text "SRAM 1.05"
                 .elsif dfs220_master
                 .text "SRAM 1.00"
@@ -10456,7 +10457,7 @@ LAC7E:                          ;*HELP with keyword
                 jsr LB479
                 bcs LAC67
                 
-                .elsif dfs225||dfs226||dfs228||dfs229
+                .elsif dfs225||dfs225_2||dfs226||dfs228||dfs229
 
                 cpx #4
                 beq LB2B2_226
@@ -10491,7 +10492,7 @@ LAC92:                          ;*HELP SRAM
 
                 .endif
                 
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
 LB2B2_226:
                 .endif
                 ldy #$00        ;can save 2 bytes by printing whole page last
@@ -10502,22 +10503,22 @@ LAC99:
                 bne LAC99
 LACA2:
                 lda LAA64+$0100,y ;print second page of *HELP SRAM
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 beq LAC67
                 .endif
                 jsr oswrch
                 iny
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229
                 cpy #<(LAB9F-LAA64) ;compare offset with (length of text - 256)
                 .endif
                 bne LACA2       ;loop until partial second page printed
                 .if dfs220_master
                 jmp LABC9
-                .elsif !dfs226&&!dfs225&&!dfs228&&!dfs229
+                .elsif !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229
                 beq LAC67       ;then quit service call handler.
                 .endif
 
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229
 LACAF:                          ;Jump to action address
                 jmp ($00B0)
 
@@ -10551,7 +10552,7 @@ LACCC:
                 .endif
 LACD2:                          ;Load/save sideways RAM
                 jsr LB1FB       ;set up pointer to private page
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229
                 lda #$00        ;OSARGS 0,0 = return current temporary filing system
                 tay
                 ldx #L00BA      ;x = scratch space pointer, unused
@@ -10601,7 +10602,7 @@ LAD0B:
                 jsr osargs
                 jsr LB1FB
                 tax
-                .elsif dfs225||dfs228||dfs229
+                .elsif dfs225||dfs225_2||dfs228||dfs229
                 jsr LB2F9_225
                 pha
                 ldy #srwork+$01
@@ -10842,7 +10843,7 @@ LAE35:                          ;Raise "Illegal address" error
                 jmp LB2CB       ;raise error by internal number
 
 LAE3A:
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 ldx #18
 LB44D_226:
                 pla
@@ -10902,7 +10903,7 @@ LAE5C:
                 lda #$FF        ;OSFILE $FF = load file
                 jsr osfile      ;call OSFILE
                 jsr LB1FB       ;set up pointer to private page
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 ldx #18
 LB4A8_226:
                 pla
@@ -11031,7 +11032,7 @@ LAF47:
                 lda #$00        ;OSFILE   0 = save file
                 jsr osfile      ;call OSFILE
                 jsr LB1FB       ;set up pointer to private page
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 ldx #$12
 LB578_226:
                 pla
@@ -11092,7 +11093,7 @@ LAF7E:                          ;Transfer buffer to sideways RAM image
                 ldy #>stack     ;point XY to new OSGBPB block in stack page
                 jsr osgbpb      ;call OSGBPB
                 ldx #$0D        ;control block size = 13 bytes
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
 LB5C6_226:
                 pla
                 dex
@@ -11237,7 +11238,7 @@ LB044:                          ;Increment transfer address
                 .endif
                 jsr LB070       ;then increment sideways RAM slot number
                                 ;[BUG]does not restart at $8010??
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 ; same bug fix as above
                 lda #<(LB263-LB253+lang) ;then reset it to $8010
                 sta L00BD+$00
@@ -11245,7 +11246,7 @@ LB044:                          ;Increment transfer address
                 sta L00BD+$01
                 .endif
 LB061:
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 ldx #L00BD
                 ldy #srwork+$04
                 jsr LB21E
@@ -11472,7 +11473,7 @@ LB12B:
                 lda L00BF       ;restore A from temp and exit.
                 rts
 
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
 LACAF:                          ;Jump to action address
                 jmp ($00B0)
                 .endif                
@@ -11499,7 +11500,7 @@ LB153:
                 jmp LB182       ;jump back into ROM to finish
 LB142_end:
                 
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 ; dup of other LB199 below
 LB199:                          ;Transfer (L00BE) bytes to sideways RAM
                 ldy #srwork+$03 ;XY+3 = ROM ID
@@ -11559,7 +11560,7 @@ LB16B:
 
 LB182:
                 ldx #LB142_end-LB142 ;$21 = transfer code size
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
 LB7D7_226:
                 pla
                 dex
@@ -11582,7 +11583,7 @@ LB194:
 LB198:
                 rts
 
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229
                 ; dup of other LB199 above
 LB199:                          ;Transfer (L00BE) bytes to sideways RAM
                 ldy #srwork+$03 ;XY+3 = ROM ID
@@ -11650,7 +11651,7 @@ LB1BD:                          ;using pseudo-addressing.
                 sta L00B0a      ;save updated slot number in zero page
                 jmp LB1BD       ;and loop back to transfer more.
 
-                .if dfs225||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs228||dfs229
 LB2F9_225:
                 lda #0
                 tay
@@ -11659,7 +11660,7 @@ LB2F9_225:
                 .endif
 
 LB1FB:                          ;Set up pointer to private page
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 php
                 .endif
                 pha             ;save AX
@@ -11673,7 +11674,7 @@ LB1FB:                          ;Set up pointer to private page
                 pla             ;restore AX and exit.
                 tax
                 pla
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 plp
                 .endif
                 rts
@@ -11710,7 +11711,7 @@ LB22B:                          ;Test OSWORD mode bits
                 pha
                 ldy #srwork+$00 ;XY+0 = OSWORD mode bits/RAM bitmap
                 lda (L00B8),y   ;get mode bits in b7,b6
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 sta L00B8+0     ;reuse pointer as a temp
                 .else
                 sta L00F6       ;romptr+$00 used as a temp
@@ -11718,7 +11719,7 @@ LB22B:                          ;Test OSWORD mode bits
                 pla             ;restore AY
                 tay
                 pla
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 bit L00B8       ;return N=load to SWRAM, V=use pseudo-addressing
                 jsr LB1FB
                 .else
@@ -11729,7 +11730,7 @@ LB22B:                          ;Test OSWORD mode bits
 LB23A:                          ;Issue Filing System Call
                 jmp (fscv)
 
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229
 LB23D:                          ;Pop 18 bytes from stack
                 ldx #$12
 LB23F:                          ;Pop X bytes from stack
@@ -11981,7 +11982,7 @@ LB3BE:                          ;return C=1, A=$FF = valid ROM not found
 
 LB3C5:                          ;Scan for keyword in table
 
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
 
                 ; Annoyingly, it looks like this whole bit got
                 ; basically rewritten at some point. Different command
@@ -12202,7 +12203,7 @@ LB465:
 
 LB469:                          ;Skip current character and spaces in command line
                 iny             ;increment command line offset
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229
                 bne LB46F       ;if not overflowed then loop
                 jmp LB4AD       ;else raise "Bad command" error.
                 .endif
@@ -12211,7 +12212,7 @@ LB46F:                          ;Skip spaces in command line
                 lda (linptr),y  ;get character of command line
                 cmp #$20        ;is it a space?
                 beq LB469       ;if so then advance and test next character
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 cmp #13
                 .else
                 clc             ;else return C=0.
@@ -12268,7 +12269,7 @@ LB4B2:                          ;end of first argument reached
                 bvs LB4AD       ;if no argument present then "Bad command"
                 rts             ;else exit
 
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229
 LB4B5:
                 iny             ;increment offset
                 beq LB4AD       ;if offset overflows then "Bad command"
@@ -12278,7 +12279,7 @@ LB4B5:
 LB4B9:                          ;Parse bank specifier
                 stx L00BF       ;save X in temp
                 jsr LB46F       ;skip spaces in command line
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229
                 lda (linptr),y  ;get bank specifier character
                 .endif
                 .if dfs220_master
@@ -12292,7 +12293,7 @@ LB4C2:
                 cmp LB4FA,x     ;else if before start of range
                 bcc LB4F3       ;then try next range
                 sbc LB502,x     ;else convert to bank number
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 iny             ;increment offset
                 .else
                 jsr LB4B5       ;increment offset
@@ -12305,7 +12306,7 @@ LB4C2:
                 cmp #$30        ;else if character < "0"
                 bcc LB4E8       ;then return A=1, C=0
                 sbc #$26        ;else C=1, convert second digit to 10..15
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 iny             ;increment offset
                 bne LB4EA
                 .else
@@ -12352,7 +12353,7 @@ LB4FE:
                 .char $7B
                 .endif
 LB502:
-                .if BUGFIX||dfs225||dfs228||dfs226||dfs229
+                .if BUGFIX||dfs225||dfs225_2||dfs228||dfs226||dfs229
                 .char $30
                 .char $37
                 .char $47
@@ -12366,7 +12367,7 @@ LB502:
                 .endif
                 .endif
 
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229
 LB506:                          ;Table of SRAM *commands
                 .if dfs220_master
                 .text "SRAM"
@@ -12480,7 +12481,7 @@ LB5A4:
                 sta (L00B8),y   ;update mode bits/RAM bitmap
                 ldy L00BA+$00   ;restore offset of end of last argument
                 jsr LB46F       ;skip spaces in command line
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229
                 lda (linptr),y  ;get first character of next argument
                 .endif
                 .if !dfs220_master
@@ -12489,7 +12490,7 @@ LB5A4:
                 ldx #$00        ;x=$00 do not use user memory for transfer
                 cmp #$51        ;if character = "Q"
                 bne LB5C5
-                .if dfs225||dfs226||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229
                 iny
                 .else
                 jsr LB4B5       ;then skip over it
@@ -12513,15 +12514,19 @@ LB5C5:
                 iny             ;XY+11 = MSB of buffer length
                 txa
                 sta (L00B8),y   ;store Q flag in private page
-                .if dfs225||dfs228||dfs229
+                .if dfs225||dfs225_2||dfs228||dfs229
                 jsr LB2F9_225
                 pha
                 jsr LACD2
+                .if !dfs225_2
                 jsr LB2F9_225
                 sta L00B0
+                .endif
                 ply
+                .if !dfs225_2
                 cpy L00B0
                 beq LB6AA_225
+                .endif
                 lda #$8F        ;OSBYTE $8F = ROM service call
                 ldx #$12        ;$12 = initialize filing system
                 jsr osbyte
@@ -12812,30 +12817,30 @@ LB74D:                          ;Read from parasite to SWRAM
                 ldx #<L00BA     ;point XY to copy of transfer address
                 ldy #>L00BA
                 jsr tubadr      ;call TUBADR to set up data transfer
-                .if dfs225||dfs226||dfs228||dfs229||dfs220_master
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs220_master
                 ldy #$07        ;wait 23 microseconds
                 .else
                 ldy #$0B        ;wait 34 microseconds
                 .endif
                 jsr LB898
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229&&!dfs220_master
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229&&!dfs220_master
                 nop             ;wait 2 microseconds:
                 nop
                 .endif
 LB775:
                 lda reg3        ;read from R3DATA
                 sta (L00B8),y   ;store in I/O memory buffer
-                .if dfs225||dfs226||dfs228||dfs229||dfs220_master
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs220_master
                 ldx #$03        ;wait 13 microseconds
                 .else
                 ldx #$08        ;wait 26.5 microseconds
                 .endif
                 jsr LB89C
-                .if dfs225||dfs226||dfs228||dfs229||dfs220_master
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs220_master
                 nop             ;wait 1 microsecond
                 .endif
                 iny             ;increment buffer offset
-                .if dfs225||dfs226||dfs228||dfs229||dfs220_master
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs220_master
                 cpy L00BE+$00
                 .else
                 cpy @w L00BE+$00 ;CPY     L00BE; +0.5 us with absolute addressing 
@@ -12858,20 +12863,20 @@ LB787:
                 ldx #<L00BA     ;point XY to Tube transfer address
                 ldy #>L00BA
                 jsr tubadr      ;call TUBADR to set up data transfer
-                .if dfs225||dfs226||dfs228||dfs229||dfs220_master
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs220_master
                 ldy #$05        ;wait 18 microseconds
                 .else
                 ldy #$08        ;wait 26.5 microseconds
                 .endif
                 jsr LB898
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229&&!dfs220_master
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229&&!dfs220_master
                 nop             ;wait 2 microseconds:
                 nop
                 .endif
 LB7A4:
                 lda reg3        ;read Tube FIFO 3
                 sta (L00B8),y   ;store in buffer (5 us so far)
-                .if dfs225||dfs226||dfs228||dfs229||dfs220_master
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs220_master
                 lda (L00B8),y   ;wait 3 microseconds
                 .else
                 jsr LB8AB       ;wait 6 microseconds
@@ -12974,18 +12979,18 @@ LB7EB:
 LB81C:
                 lda (L00B8),y   ;get byte from buffer
                 sta reg3        ;store in Tube FIFO 3 (4.5 us so far)
-                .if dfs225||dfs226||dfs228||dfs229||dfs220_master
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs220_master
                 ldx #$03        ;wait 13 microseconds
                 .else
                 ldx #$08        ;wait 26.5 microseconds
                 .endif
                 jsr LB89C
-                .if !dfs226&&!dfs225&&!dfs228&&!dfs229&&!dfs220_master
+                .if !dfs226&&!dfs225&&!dfs225_2&&!dfs228&&!dfs229&&!dfs220_master
                 nop             ;wait 1 microsecond
                 .endif
                 iny             ;increment offset
                 cpy L00BE+$00   ;test if end of buffer reached
-                .if dfs225||dfs226||dfs228||dfs229||dfs220_master
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs220_master
                 cpy L00BE+$00   ;[BUG] can't hurt to double check
                 .endif
                 bne LB81C       ;if not then loop (36 us per byte)
@@ -13004,7 +13009,7 @@ LB82E:
 LB83E:
                 lda (L00B8),y   ;get byte from buffer
                 sta reg3        ;store in Tube FIFO 3 (4.5 us so far)
-                .if dfs225||dfs226||dfs228||dfs229||dfs220_master
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs220_master
                 nop             
                 nop             
                 nop             ;wait 3 microseconds total
@@ -13517,7 +13522,7 @@ cmdtbl:
                 .char $00
                 .else
 
-                .if dfs225||dfs226||dfs228||dfs229||dfs242||dfs220_master
+                .if dfs225||dfs225_2||dfs226||dfs228||dfs229||dfs242||dfs220_master
 ; Padding
                 .fill $c000-*,$ff
                 .elsif dfs244||dfs245
