@@ -1,6 +1,6 @@
 Disassembly of several versions of Acorn 1770 DFS. This project is
-based on
-[Greg Cook's disassembly of DFS 2.24](http://regregex.bbcmicro.net/dfs224.asm.txt).
+based on [Greg Cook's disassembly of DFS
+2.24](https://web.archive.org/web/20250318233812/http://regregex.bbcmicro.net/dfs224.asm.txt).
 
 # Goals
 
